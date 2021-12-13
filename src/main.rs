@@ -125,21 +125,27 @@ fn run_problem(problem_name: &str) -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    // Parse the command-line argument to get the problem name to run, or "all"
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
         println!("Usage: advent <problemName>");
         std::process::exit(1);
     }
+
+    // Figure out which problems to run
     let problem_name = &args[1];
-    if problem_name == "all" {
-        for name in all_problems()? {
-            match run_problem(&name) {
-                Err(x) => return Err(x),
-                Ok(_) => {}
-            }
-        }
-        Ok(())
+    let problems_to_run = if problem_name == "all" {
+        all_problems()?
     } else {
-        run_problem(problem_name)
+        vec![problem_name.clone()]
+    };
+
+    // Run them
+    for name in problems_to_run {
+        match run_problem(&name) {
+            Err(x) => return Err(x),
+            Ok(_) => {}
+        }
     }
+    Ok(())
 }
