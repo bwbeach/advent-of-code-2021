@@ -1,4 +1,5 @@
 use std::env;
+use std::fmt;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::path::Path;
@@ -34,6 +35,29 @@ fn day_1_a(lines: &Vec<String>) -> Result<String> {
     Ok(format!("{}", count))
 }
 
+/// Solutions know how to take the input lines for a problem and produce the answer.
+type Solution = fn(&Vec<String>) -> Result<String>;
+
+/// Error that indicates there is no such problem.
+#[derive(Debug, Clone)]
+struct NoSuchProblemError;
+
+impl fmt::Display for NoSuchProblemError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "function for problem not implemented")
+    }
+}
+
+impl std::error::Error for NoSuchProblemError {}
+
+fn function_for_problem(problem_name: &str) -> Result<Solution> {
+    if problem_name == "day-1-a" {
+        Ok(day_1_a)
+    } else {
+        Err(Box::new(NoSuchProblemError))
+    }
+}
+
 fn main() -> Result<()> {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
@@ -41,13 +65,14 @@ fn main() -> Result<()> {
         std::process::exit(1);
     }
     let problem_name = &args[1];
+    let solution = function_for_problem(problem_name)?;
     let input_dir = format!("input/{}", problem_name);
     println!("Input dir: {}", input_dir);
     for entry in std::fs::read_dir(input_dir)? {
         let path = entry?.path();
         println!("Reading file: {}", path.display());
         let lines = lines_in_file(&path)?;
-        let answer = day_1_a(&lines);
+        let answer = solution(&lines);
         println!("answer: {}", answer?);
     }
     Ok(())
