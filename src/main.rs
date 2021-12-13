@@ -41,28 +41,35 @@ type Solution = fn(&Vec<String>) -> Result<String>;
 
 /// Error that indicates there is no such problem.
 #[derive(Debug, Clone)]
-struct NoSuchProblemError;
+struct AdventError {
+    message: String,
+}
 
-impl fmt::Display for NoSuchProblemError {
+impl fmt::Display for AdventError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "function for problem not implemented")
+        write!(f, "AdventError: {}", self.message)
     }
 }
 
-impl std::error::Error for NoSuchProblemError {}
+impl std::error::Error for AdventError {}
 
 fn function_for_problem(problem_name: &str) -> Result<Solution> {
     if problem_name == "day-1-a" {
         Ok(day_1_a)
     } else {
-        Err(Box::new(NoSuchProblemError))
+        Err(Box::new(AdventError {
+            message: format!("no such problem: {}", problem_name.escape_debug()),
+        }))
     }
 }
 
 fn build_expected_answers() -> HashMap<String, String> {
     let mut result: HashMap<String, String> = HashMap::new();
-    result.insert("input/day-1-a/sample.txt".to_string(), "7".to_string());
-    result.insert("input/day-1-a/input.txt".to_string(), "1233".to_string());
+    let mut add = |name: &str, answer: &str| {
+        result.insert(name.to_string(), answer.to_string());
+    };
+    add("input/day-1-a/sample.txt", "7");
+    add("input/day-1-a/input.txt", "1233");
     result
 }
 
@@ -104,7 +111,9 @@ fn run_problem(problem_name: &str) -> Result<()> {
                 println!("Expected {}", *expected_answer);
                 if *expected_answer != answer {
                     println!("Mismatch: {} {}", answer, *expected_answer);
-                    return Err(Box::new(NoSuchProblemError));
+                    return Err(Box::new(AdventError {
+                        message: "wrong answer".to_string(),
+                    }));
                 } else {
                     println!("match");
                 }
