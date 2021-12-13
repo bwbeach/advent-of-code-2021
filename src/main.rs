@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::fs::File;
@@ -58,13 +59,35 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
     }
 }
 
-fn main() -> Result<()> {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        println!("Usage: advent <problemName>");
-        std::process::exit(1);
+fn build_expected_answers() -> HashMap<String, String> {
+    let mut result: HashMap<String, String> = HashMap::new();
+    result.insert("input/day-1-a/sample.txt".to_string(), "7".to_string());
+    result.insert("input/day-1-a/input.txt".to_string(), "1233".to_string());
+    result
+}
+
+/// Returns a list of all of the problems we have, in alphabetical order.
+fn all_problems() -> Result<Vec<String>> {
+    let mut result: Vec<String> = Vec::new();
+    for entry in std::fs::read_dir("input")? {
+        result.push(
+            entry?
+                .path()
+                .file_name()
+                .expect("file without name")
+                .to_str()
+                .expect("invalid file name")
+                .to_string(),
+        )
     }
-    let problem_name = &args[1];
+    // TODO: sort
+    Ok(result)
+}
+
+fn run_problem(problem_name: &str) -> Result<()> {
+    println!("\n########");
+    println!("# {}", problem_name);
+    println!("########\n");
     let solution = function_for_problem(problem_name)?;
     let input_dir = format!("input/{}", problem_name);
     println!("Input dir: {}", input_dir);
@@ -72,8 +95,42 @@ fn main() -> Result<()> {
         let path = entry?.path();
         println!("Reading file: {}", path.display());
         let lines = lines_in_file(&path)?;
-        let answer = solution(&lines);
-        println!("answer: {}", answer?);
+        let answer = solution(&lines)?;
+        println!("answer: {}", answer);
+        let expected_answers = build_expected_answers();
+        let path_str = format!("{}", path.display());
+        match expected_answers.get(&path_str) {
+            Some(expected_answer) => {
+                println!("Expected {}", *expected_answer);
+                if *expected_answer != answer {
+                    println!("Mismatch: {} {}", answer, *expected_answer);
+                    return Err(Box::new(NoSuchProblemError));
+                } else {
+                    println!("match");
+                }
+            }
+            None => {}
+        }
     }
     Ok(())
+}
+
+fn main() -> Result<()> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        println!("Usage: advent <problemName>");
+        std::process::exit(1);
+    }
+    let problem_name = &args[1];
+    if problem_name == "all" {
+        for name in all_problems()? {
+            match run_problem(&name) {
+                Err(x) => return Err(x),
+                Ok(_) => {}
+            }
+        }
+        Ok(())
+    } else {
+        run_problem(problem_name)
+    }
 }
