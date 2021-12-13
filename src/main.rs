@@ -79,14 +79,12 @@ impl fmt::Display for AdventError {
 impl std::error::Error for AdventError {}
 
 fn function_for_problem(problem_name: &str) -> Result<Solution> {
-    if problem_name == "day-1-a" {
-        Ok(day_1_a)
-    } else if problem_name == "day-1-b" {
-        Ok(day_1_b)
-    } else {
-        Err(Box::new(AdventError {
+    match problem_name {
+        "day-1-a" => Ok(day_1_a),
+        "day-1-b" => Ok(day_1_b),
+        _ => Err(Box::new(AdventError {
             message: format!("no such problem: {}", problem_name.escape_debug()),
-        }))
+        })),
     }
 }
 
