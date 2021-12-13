@@ -19,6 +19,7 @@ fn lines_in_file(path: &Path) -> Result<Vec<String>> {
     Ok(result)
 }
 
+/// 1a: Counts lines containin numbers bigger than the line before
 fn day_1_a(lines: &Vec<String>) -> Result<String> {
     let mut prev: Option<u64> = None;
     let mut count: u64 = 0;
@@ -32,6 +33,30 @@ fn day_1_a(lines: &Vec<String>) -> Result<String> {
             count += 1;
         }
         prev = Some(value)
+    }
+    Ok(format!("{}", count))
+}
+
+/// 1b: Counts groups of three lines containin numbers bigger than the line before
+fn day_1_b(lines: &Vec<String>) -> Result<String> {
+    let mut a;
+    let mut b: u64 = 0;
+    let mut c: u64 = 0;
+    let mut num_seen: u64 = 0;
+    let mut prev_sum: u64 = 0;
+    let mut count: u64 = 0;
+    for line in lines {
+        a = b;
+        b = c;
+        c = line.parse()?;
+        num_seen += 1;
+        if 3 <= num_seen {
+            let sum = a + b + c;
+            if 4 <= num_seen && prev_sum < sum {
+                count += 1;
+            }
+            prev_sum = sum;
+        }
     }
     Ok(format!("{}", count))
 }
@@ -56,6 +81,8 @@ impl std::error::Error for AdventError {}
 fn function_for_problem(problem_name: &str) -> Result<Solution> {
     if problem_name == "day-1-a" {
         Ok(day_1_a)
+    } else if problem_name == "day-1-b" {
+        Ok(day_1_b)
     } else {
         Err(Box::new(AdventError {
             message: format!("no such problem: {}", problem_name.escape_debug()),
@@ -63,6 +90,10 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
     }
 }
 
+/// Returns a mapping from problem/input to expected answer
+///
+/// Answers are added here after being checked against the advent of code
+/// web site.  These are used as regression tests when refactoring code.
 fn build_expected_answers() -> HashMap<String, String> {
     let mut result: HashMap<String, String> = HashMap::new();
     let mut add = |name: &str, answer: &str| {
@@ -70,6 +101,8 @@ fn build_expected_answers() -> HashMap<String, String> {
     };
     add("input/day-1-a/sample.txt", "7");
     add("input/day-1-a/input.txt", "1233");
+    add("input/day-1-b/sample.txt", "5");
+    add("input/day-1-b/input.txt", "1275");
     result
 }
 
@@ -87,7 +120,7 @@ fn all_problems() -> Result<Vec<String>> {
                 .to_string(),
         )
     }
-    // TODO: sort
+    result.sort();
     Ok(result)
 }
 
