@@ -4,8 +4,12 @@ use std::fmt;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::path::Path;
+use std::str::FromStr;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+/// The answer to each problem is a positive integer
+type Answer = u64;
 
 /// Returns a vector containing all of the lines in a file.Iterator
 ///
@@ -19,12 +23,18 @@ fn lines_in_file(path: &Path) -> Result<Vec<String>> {
     Ok(result)
 }
 
+/// Takes a vector of strings and converts them to u64
+fn lines_to_numbers(lines: &Vec<String>) -> Result<Vec<u64>> {
+    let result: std::result::Result<Vec<u64>, std::num::ParseIntError> =
+        lines.iter().map(|s| s.parse()).collect();
+    Ok(result?)
+}
+
 /// 1a: Counts lines containin numbers bigger than the line before
-fn day_1_a(lines: &Vec<String>) -> Result<String> {
+fn day_1_a(lines: &Vec<String>) -> Result<Answer> {
     let mut prev: Option<u64> = None;
     let mut count: u64 = 0;
-    for line in lines {
-        let value: u64 = line.parse()?;
+    for value in lines_to_numbers(&lines)? {
         let is_increase = match prev {
             Some(prev_value) => prev_value < value,
             None => false,
@@ -34,11 +44,11 @@ fn day_1_a(lines: &Vec<String>) -> Result<String> {
         }
         prev = Some(value)
     }
-    Ok(format!("{}", count))
+    Ok(count)
 }
 
 /// 1b: Counts groups of three lines containin numbers bigger than the line before
-fn day_1_b(lines: &Vec<String>) -> Result<String> {
+fn day_1_b(lines: &Vec<String>) -> Result<Answer> {
     let mut a;
     let mut b: u64 = 0;
     let mut c: u64 = 0;
@@ -58,11 +68,68 @@ fn day_1_b(lines: &Vec<String>) -> Result<String> {
             prev_sum = sum;
         }
     }
-    Ok(format!("{}", count))
+    Ok(count)
+}
+
+enum SubmarineDirection {
+    Up,
+    Down,
+    Forward,
+}
+
+impl FromStr for SubmarineDirection {
+    type Err = AdventError;
+
+    fn from_str(s: &str) -> std::result::Result<SubmarineDirection, Self::Err> {
+        match s {
+            "up" => Ok(SubmarineDirection::Up),
+            "down" => Ok(SubmarineDirection::Down),
+            "forward" => Ok(SubmarineDirection::Forward),
+            _ => Err(AdventError {
+                message: format!("unknown submarine direction: {}", s),
+            }),
+        }
+    }
+}
+
+struct SubmarineCommand {
+    direction: SubmarineDirection,
+    distance: u64,
+}
+
+impl FromStr for SubmarineCommand {
+    type Err = AdventError;
+
+    fn from_str(s: &str) -> std::result::Result<SubmarineCommand, Self::Err> {
+        let mut iter = s.split_whitespace();
+        let direction: SubmarineDirection = iter.next().unwrap().parse()?;
+        // TODO: translate error
+        let distance: u64 = iter.next().unwrap().parse().expect("parsing distance");
+        Ok(SubmarineCommand {
+            direction,
+            distance,
+        })
+    }
+}
+
+// TODO: unit tests for parsing
+
+fn day_2_a(lines: &Vec<String>) -> Result<Answer> {
+    let mut distance = 0;
+    let mut depth = 0;
+    for line in lines {
+        let command: SubmarineCommand = line.parse()?;
+        match command.direction {
+            SubmarineDirection::Up => depth -= command.distance,
+            SubmarineDirection::Down => depth += command.distance,
+            SubmarineDirection::Forward => distance += command.distance,
+        }
+    }
+    Ok(distance * depth)
 }
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
-type Solution = fn(&Vec<String>) -> Result<String>;
+type Solution = fn(&Vec<String>) -> Result<Answer>;
 
 /// Error that indicates there is no such problem.
 #[derive(Debug, Clone)]
@@ -82,6 +149,7 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
     match problem_name {
         "day-1-a" => Ok(day_1_a),
         "day-1-b" => Ok(day_1_b),
+        "day-2-a" => Ok(day_2_a),
         _ => Err(Box::new(AdventError {
             message: format!("no such problem: {}", problem_name.escape_debug()),
         })),
@@ -92,15 +160,16 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
 ///
 /// Answers are added here after being checked against the advent of code
 /// web site.  These are used as regression tests when refactoring code.
-fn build_expected_answers() -> HashMap<String, String> {
-    let mut result: HashMap<String, String> = HashMap::new();
-    let mut add = |name: &str, answer: &str| {
-        result.insert(name.to_string(), answer.to_string());
+fn build_expected_answers() -> HashMap<String, Answer> {
+    let mut result = HashMap::new();
+    let mut add = |name: &str, answer: u64| {
+        result.insert(name.to_string(), answer);
     };
-    add("input/day-1-a/sample.txt", "7");
-    add("input/day-1-a/input.txt", "1233");
-    add("input/day-1-b/sample.txt", "5");
-    add("input/day-1-b/input.txt", "1275");
+    add("input/day-1-a/sample.txt", 7);
+    add("input/day-1-a/input.txt", 1233);
+    add("input/day-1-b/sample.txt", 5);
+    add("input/day-1-b/input.txt", 1275);
+    add("input/day-2-a/sample.txt", 150);
     result
 }
 
