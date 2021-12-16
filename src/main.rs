@@ -146,8 +146,24 @@ fn day_2_b(lines: &Vec<String>) -> Result<Answer> {
     Ok(distance * depth)
 }
 
-fn day_3_a(_lines: &Vec<String>) -> Result<Answer> {
-    Ok(0)
+fn day_3_a(lines: &Vec<String>) -> Result<Answer> {
+    let number_of_bits = lines[0].len();
+    let numbers: Vec<u64> = lines
+        .iter()
+        .map(|s| u64::from_str_radix(s, 2).unwrap())
+        .collect();
+    let mut epsilon: u64 = 0;
+    let mut gamma: u64 = 0;
+    for i in 0..number_of_bits {
+        let mask: u64 = 1 << i;
+        let number_of_ones = numbers.iter().filter(|n| *n & mask != 0).count();
+        if number_of_ones < numbers.len() / 2 {
+            epsilon += mask;
+        } else {
+            gamma += mask;
+        }
+    }
+    Ok(epsilon * gamma)
 }
 
 fn day_3_b(_lines: &Vec<String>) -> Result<Answer> {
@@ -202,6 +218,8 @@ fn build_expected_answers() -> HashMap<String, Answer> {
     add("input/day-2-a/input.txt", 1383564);
     add("input/day-2-b/sample.txt", 900);
     add("input/day-2-b/input.txt", 1488311643);
+    add("input/day-3-a/sample.txt", 198);
+    add("input/day-3-a/input.txt", 693486);
     result
 }
 
@@ -249,9 +267,10 @@ fn run_problem(problem_name: &str) -> Result<()> {
         let lines = lines_in_file(&path)?;
         let answer = solution(&lines)?;
         println!("answer: {}", answer);
+        let file_name = path.file_name().unwrap().to_str().unwrap();
+        let expected_answer_name = format!("input/{}/{}", problem_name, file_name);
         let expected_answers = build_expected_answers();
-        let path_str = format!("{}", path.display());
-        match expected_answers.get(&path_str) {
+        match expected_answers.get(&expected_answer_name) {
             Some(expected_answer) => {
                 println!("Expected {}", *expected_answer);
                 if *expected_answer != answer {
