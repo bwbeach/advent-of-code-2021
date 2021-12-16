@@ -128,6 +128,10 @@ fn day_2_a(lines: &Vec<String>) -> Result<Answer> {
     Ok(distance * depth)
 }
 
+fn day_2_b(_lines: &Vec<String>) -> Result<Answer> {
+    Ok(0)
+}
+
 /// Solutions know how to take the input lines for a problem and produce the answer.
 type Solution = fn(&Vec<String>) -> Result<Answer>;
 
@@ -150,6 +154,7 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
         "day-1-a" => Ok(day_1_a),
         "day-1-b" => Ok(day_1_b),
         "day-2-a" => Ok(day_2_a),
+        "day-2-b" => Ok(day_2_b),
         _ => Err(Box::new(AdventError {
             message: format!("no such problem: {}", problem_name.escape_debug()),
         })),
@@ -174,8 +179,8 @@ fn build_expected_answers() -> HashMap<String, Answer> {
     result
 }
 
-/// Returns a list of all of the problems we have, in alphabetical order.
-fn all_problems() -> Result<Vec<String>> {
+/// Returns a list of all of the days we have input data sets for.
+fn all_days() -> Result<Vec<String>> {
     let mut result: Vec<String> = Vec::new();
     for entry in std::fs::read_dir("input")? {
         result.push(
@@ -192,12 +197,25 @@ fn all_problems() -> Result<Vec<String>> {
     Ok(result)
 }
 
+/// Returns a list of all of the prbolems, assuming each day
+/// has a "-a" and a "-b" version.
+fn all_problems() -> Result<Vec<String>> {
+    let mut result: Vec<String> = Vec::new();
+    for day in all_days()? {
+        result.push(format!("{}-a", day));
+        result.push(format!("{}-b", day));
+    }
+    Ok(result)
+}
+
 fn run_problem(problem_name: &str) -> Result<()> {
     println!("\n########");
     println!("# {}", problem_name);
     println!("########\n");
     let solution = function_for_problem(problem_name)?;
-    let input_dir = format!("input/{}", problem_name);
+    let end = problem_name.len() - 2;
+    let day_name = &problem_name[0..end];
+    let input_dir = format!("input/{}", day_name.to_string());
     println!("Input dir: {}", input_dir);
     for entry in std::fs::read_dir(input_dir)? {
         let path = entry?.path();
