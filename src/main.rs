@@ -146,6 +146,14 @@ fn day_2_b(lines: &Vec<String>) -> Result<Answer> {
     Ok(distance * depth)
 }
 
+fn day_3_a(_lines: &Vec<String>) -> Result<Answer> {
+    Ok(0)
+}
+
+fn day_3_b(_lines: &Vec<String>) -> Result<Answer> {
+    Ok(0)
+}
+
 /// Solutions know how to take the input lines for a problem and produce the answer.
 type Solution = fn(&Vec<String>) -> Result<Answer>;
 
@@ -169,6 +177,8 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
         "day-1-b" => Ok(day_1_b),
         "day-2-a" => Ok(day_2_a),
         "day-2-b" => Ok(day_2_b),
+        "day-3-a" => Ok(day_3_a),
+        "day-3-b" => Ok(day_3_b),
         _ => Err(Box::new(AdventError {
             message: format!("no such problem: {}", problem_name.escape_debug()),
         })),
