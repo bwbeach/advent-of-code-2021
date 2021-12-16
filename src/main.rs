@@ -128,8 +128,22 @@ fn day_2_a(lines: &Vec<String>) -> Result<Answer> {
     Ok(distance * depth)
 }
 
-fn day_2_b(_lines: &Vec<String>) -> Result<Answer> {
-    Ok(0)
+fn day_2_b(lines: &Vec<String>) -> Result<Answer> {
+    let mut distance = 0;
+    let mut depth = 0;
+    let mut aim = 0;
+    for line in lines {
+        let command: SubmarineCommand = line.parse()?;
+        match command.direction {
+            SubmarineDirection::Up => aim -= command.distance,
+            SubmarineDirection::Down => aim += command.distance,
+            SubmarineDirection::Forward => {
+                distance += command.distance;
+                depth += aim * command.distance;
+            }
+        }
+    }
+    Ok(distance * depth)
 }
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
@@ -176,6 +190,8 @@ fn build_expected_answers() -> HashMap<String, Answer> {
     add("input/day-1-b/input.txt", 1275);
     add("input/day-2-a/sample.txt", 150);
     add("input/day-2-a/input.txt", 1383564);
+    add("input/day-2-b/sample.txt", 900);
+    add("input/day-2-b/input.txt", 1488311643);
     result
 }
 
