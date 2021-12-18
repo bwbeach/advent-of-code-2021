@@ -30,6 +30,14 @@ fn lines_to_numbers(lines: &Vec<String>) -> Result<Vec<u64>> {
     Ok(result?)
 }
 
+#[test]
+fn test_lines_to_numbers() {
+    assert_eq!(
+        vec![1, 456],
+        lines_to_numbers(&vec!["1".to_string(), "456".to_string()]).unwrap()
+    );
+}
+
 /// 1a: Counts lines containin numbers bigger than the line before
 fn day_1_a(lines: &Vec<String>) -> Result<Answer> {
     let mut prev: Option<u64> = None;
@@ -71,6 +79,7 @@ fn day_1_b(lines: &Vec<String>) -> Result<Answer> {
     Ok(count)
 }
 
+#[derive(Debug, PartialEq)]
 enum SubmarineDirection {
     Up,
     Down,
@@ -92,6 +101,7 @@ impl FromStr for SubmarineDirection {
     }
 }
 
+#[derive(Debug, PartialEq)]
 struct SubmarineCommand {
     direction: SubmarineDirection,
     distance: u64,
@@ -110,6 +120,17 @@ impl FromStr for SubmarineCommand {
             distance,
         })
     }
+}
+
+#[test]
+fn test_submarine_command() {
+    assert_eq!(
+        SubmarineCommand {
+            direction: SubmarineDirection::Forward,
+            distance: 45
+        },
+        SubmarineCommand::from_str("forward 45").unwrap()
+    )
 }
 
 // TODO: unit tests for parsing
