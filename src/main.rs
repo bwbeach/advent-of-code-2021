@@ -187,8 +187,57 @@ fn day_3_a(lines: &Vec<String>) -> Result<Answer> {
     Ok(epsilon * gamma)
 }
 
-fn day_3_b(_lines: &Vec<String>) -> Result<Answer> {
-    Ok(0)
+/// Returns the most common bit in a sequence of binary numbers
+/// represented as strings of '0' and '1'.
+///
+/// TODO: switch from String to &str
+fn most_common_bit_in_column(numbers: &Vec<String>, index: usize) -> char {
+    let number_of_ones = numbers
+        .iter()
+        .filter(|s| s.as_bytes()[index] == '1' as u8)
+        .count();
+    if numbers.len() <= number_of_ones * 2 {
+        '1'
+    } else {
+        '0'
+    }
+}
+
+#[test]
+fn test_most_common_bin_in_column() {
+    let data = vec![
+        "0001".to_string(),
+        "0011".to_string(),
+        "0111".to_string(),
+        "1111".to_string(),
+    ];
+    assert_eq!('0', most_common_bit_in_column(&data, 0));
+    assert_eq!('1', most_common_bit_in_column(&data, 1));
+    assert_eq!('1', most_common_bit_in_column(&data, 2));
+    assert_eq!('1', most_common_bit_in_column(&data, 3));
+}
+
+fn day_3_b_helper(lines: &Vec<String>, index: usize, keep_common: bool) -> String {
+    if lines.len() == 0 {
+        panic!("no lines in input");
+    } else if lines.len() == 1 {
+        lines[0].clone()
+    } else {
+        let most_common = most_common_bit_in_column(lines, index);
+        let matching = lines
+            .iter()
+            .filter(|s| (s.as_bytes()[index] == most_common as u8) == keep_common)
+            .map(|s| s.clone())
+            .collect();
+        day_3_b_helper(&matching, index + 1, keep_common)
+    }
+}
+fn day_3_b(lines: &Vec<String>) -> Result<Answer> {
+    let oxygen_line = day_3_b_helper(lines, 0, true);
+    let oxygen = u64::from_str_radix(&oxygen_line, 2).unwrap();
+    let co2_line = day_3_b_helper(lines, 0, false);
+    let co2 = u64::from_str_radix(&co2_line, 2).unwrap();
+    Ok(oxygen * co2)
 }
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
@@ -241,6 +290,8 @@ fn build_expected_answers() -> HashMap<String, Answer> {
     add("input/day-2-b/input.txt", 1488311643);
     add("input/day-3-a/sample.txt", 198);
     add("input/day-3-a/input.txt", 693486);
+    add("input/day-3-b/sample.txt", 230);
+    add("input/day-3-b/input.txt", 3379326);
     result
 }
 
