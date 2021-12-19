@@ -6,7 +6,7 @@ use std::io::{prelude::*, BufReader};
 use std::path::Path;
 use std::str::FromStr;
 
-use ndarray::Array2;
+use ndarray::{arr2, Array2}; // TODO: fix unused warning, and keep available for tests
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -245,6 +245,79 @@ fn day_3_b(lines: &Vec<String>) -> Result<Answer> {
 /// A number on a Day 4 bingo card
 type BingoCardNumber = u8;
 
+/// Finds the sequences of non-empty lines in a list of lines.
+///
+/// TODO: figure out how to use group_by, either the new experimental
+/// feature in std, or the one in the itertools package.
+fn group_lines(lines: &Vec<String>) -> Vec<Vec<String>> {
+    let mut result = Vec::new();
+    let mut current_group = Vec::new();
+    for line in lines {
+        if line.len() == 0 {
+            if current_group.len() != 0 {
+                result.push(current_group.clone());
+                current_group.clear();
+            }
+        } else {
+            current_group.push(line.clone());
+        }
+    }
+    if current_group.len() != 0 {
+        result.push(current_group.clone());
+    }
+    result
+}
+
+#[test]
+fn test_group_lines() {
+    assert_eq!(
+        vec![
+            vec!["a".to_string(), "b".to_string()],
+            vec!["c".to_string()]
+        ],
+        group_lines(&vec![
+            "".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+            "".to_string(),
+            "".to_string(),
+            "c".to_string(),
+            "".to_string()
+        ])
+    )
+}
+
+/// Holds one bingo card and the numbers on it.
+///
+/// This is just the card, and does not track which
+/// numbers have been drawn.
+#[derive(Debug, PartialEq)]
+struct BingoCard {
+    grid: Array2<BingoCardNumber>,
+}
+
+fn parse_bingo_card(lines: &Vec<String>) -> BingoCard {
+    let size = lines.len();
+    let mut grid = Array2::<BingoCardNumber>::zeros((size, size));
+    for (y, line) in lines.iter().enumerate() {
+        for (x, num_str) in line.split_whitespace().enumerate() {
+            let number: BingoCardNumber = num_str.parse().unwrap();
+            grid[(y, x)] = number;
+        }
+    }
+    BingoCard { grid }
+}
+
+#[test]
+fn test_parse_bingo_card() {
+    assert_eq!(
+        BingoCard {
+            grid: arr2(&[[1, 2], [3, 4]])
+        },
+        parse_bingo_card(&vec!("1 2".to_string(), " 3  4 ".to_string()))
+    )
+}
+
 /// Holds the input to Day 4 problems
 #[derive(Debug, PartialEq)]
 struct Day4Input {
@@ -252,17 +325,60 @@ struct Day4Input {
     called: Vec<BingoCardNumber>,
 
     // The collection of cards
-    cards: Vec<Array2<BingoCardNumber>>,
+    cards: Vec<BingoCard>,
 }
 
-impl FromStr for Day4Input {
-    type Err = AdventError;
+fn parse_day_4_input(lines: &Vec<String>) -> Day4Input {
+    let called: Vec<BingoCardNumber> = lines[0].split(",").map(|s| s.parse().unwrap()).collect();
+    // TODO: use slice of &str
+    let remaining_lines = lines[1..].iter().map(|line| line.clone()).collect();
+    let cards: Vec<BingoCard> = group_lines(&remaining_lines)
+        .iter()
+        .map(|g| parse_bingo_card(g))
+        .collect();
+    Day4Input { called, cards }
+}
 
-    fn from_str(_s: &str) -> std::result::Result<Day4Input, Self::Err> {
-        let called = vec![];
-        let cards = vec![];
-        Ok(Day4Input { called, cards })
-    }
+#[test]
+fn test_parse_day_4_input() {
+    let input: Vec<String> = r"13,15
+
+    1 2
+    3 4
+
+    5 6
+    7 8
+"
+    .split("\n")
+    .map(|s| s.to_string())
+    .collect();
+
+    assert_eq!(
+        Day4Input {
+            called: vec![13, 15],
+            cards: vec![
+                BingoCard {
+                    grid: arr2(&[[1, 2], [3, 4]])
+                },
+                BingoCard {
+                    grid: arr2(&[[5, 6], [7, 8]])
+                }
+            ]
+        },
+        parse_day_4_input(&input)
+    )
+}
+
+fn day_4_a(lines: &Vec<String>) -> Result<Answer> {
+    let input = parse_day_4_input(lines);
+    println!("{:?}", input);
+    Ok(0)
+}
+
+fn day_4_b(lines: &Vec<String>) -> Result<Answer> {
+    let input = parse_day_4_input(lines);
+    println!("{:?}", input);
+    Ok(0)
 }
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
@@ -290,6 +406,8 @@ fn function_for_problem(problem_name: &str) -> Result<Solution> {
         "day-2-b" => Ok(day_2_b),
         "day-3-a" => Ok(day_3_a),
         "day-3-b" => Ok(day_3_b),
+        "day-4-a" => Ok(day_4_a),
+        "day-4-b" => Ok(day_4_b),
         _ => Err(Box::new(AdventError {
             message: format!("no such problem: {}", problem_name.escape_debug()),
         })),
