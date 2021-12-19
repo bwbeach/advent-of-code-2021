@@ -6,6 +6,8 @@ use std::io::{prelude::*, BufReader};
 use std::path::Path;
 use std::str::FromStr;
 
+use ndarray::Array2;
+
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 /// The answer to each problem is a positive integer
@@ -238,6 +240,29 @@ fn day_3_b(lines: &Vec<String>) -> Result<Answer> {
     let co2_line = day_3_b_helper(lines, 0, false);
     let co2 = u64::from_str_radix(&co2_line, 2).unwrap();
     Ok(oxygen * co2)
+}
+
+/// A number on a Day 4 bingo card
+type BingoCardNumber = u8;
+
+/// Holds the input to Day 4 problems
+#[derive(Debug, PartialEq)]
+struct Day4Input {
+    // The list of numbers called
+    called: Vec<BingoCardNumber>,
+
+    // The collection of cards
+    cards: Vec<Array2<BingoCardNumber>>,
+}
+
+impl FromStr for Day4Input {
+    type Err = AdventError;
+
+    fn from_str(_s: &str) -> std::result::Result<Day4Input, Self::Err> {
+        let called = vec![];
+        let cards = vec![];
+        Ok(Day4Input { called, cards })
+    }
 }
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
