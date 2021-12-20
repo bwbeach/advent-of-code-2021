@@ -9,11 +9,11 @@ use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available 
 mod types;
 mod util;
 
-use types::{Answer, Result};
+use types::{AdventResult, Answer};
 use util::lines_in_file;
 
 /// Takes a vector of strings and converts them to u64
-fn lines_to_numbers(lines: &Vec<String>) -> Result<Vec<u64>> {
+fn lines_to_numbers(lines: &Vec<String>) -> AdventResult<Vec<u64>> {
     let result: std::result::Result<Vec<u64>, std::num::ParseIntError> =
         lines.iter().map(|s| s.parse()).collect();
     Ok(result?)
@@ -28,7 +28,7 @@ fn test_lines_to_numbers() {
 }
 
 /// 1a: Counts lines containin numbers bigger than the line before
-fn day_1_a(lines: &Vec<String>) -> Result<Answer> {
+fn day_1_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let mut prev: Option<u64> = None;
     let mut count: u64 = 0;
     for value in lines_to_numbers(&lines)? {
@@ -45,7 +45,7 @@ fn day_1_a(lines: &Vec<String>) -> Result<Answer> {
 }
 
 /// 1b: Counts groups of three lines containin numbers bigger than the line before
-fn day_1_b(lines: &Vec<String>) -> Result<Answer> {
+fn day_1_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let mut a;
     let mut b: u64 = 0;
     let mut c: u64 = 0;
@@ -124,7 +124,7 @@ fn test_submarine_command() {
 
 // TODO: unit tests for parsing
 
-fn day_2_a(lines: &Vec<String>) -> Result<Answer> {
+fn day_2_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let mut distance = 0;
     let mut depth = 0;
     for line in lines {
@@ -138,7 +138,7 @@ fn day_2_a(lines: &Vec<String>) -> Result<Answer> {
     Ok(distance * depth)
 }
 
-fn day_2_b(lines: &Vec<String>) -> Result<Answer> {
+fn day_2_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let mut distance = 0;
     let mut depth = 0;
     let mut aim = 0;
@@ -156,7 +156,7 @@ fn day_2_b(lines: &Vec<String>) -> Result<Answer> {
     Ok(distance * depth)
 }
 
-fn day_3_a(lines: &Vec<String>) -> Result<Answer> {
+fn day_3_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let number_of_bits = lines[0].len();
     let numbers: Vec<u64> = lines
         .iter()
@@ -221,7 +221,7 @@ fn day_3_b_helper(lines: &Vec<String>, index: usize, keep_common: bool) -> Strin
         day_3_b_helper(&matching, index + 1, keep_common)
     }
 }
-fn day_3_b(lines: &Vec<String>) -> Result<Answer> {
+fn day_3_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let oxygen_line = day_3_b_helper(lines, 0, true);
     let oxygen = u64::from_str_radix(&oxygen_line, 2).unwrap();
     let co2_line = day_3_b_helper(lines, 0, false);
@@ -403,7 +403,7 @@ fn test_parse_day_4_input() {
     )
 }
 
-fn day_4_a(lines: &Vec<String>) -> Result<Answer> {
+fn day_4_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let input = parse_day_4_input(lines);
     let mut picked_so_far = HashSet::<BingoCardNumber>::new();
     for &draw in input.called.iter() {
@@ -417,7 +417,7 @@ fn day_4_a(lines: &Vec<String>) -> Result<Answer> {
     Ok(0)
 }
 
-fn day_4_b(lines: &Vec<String>) -> Result<Answer> {
+fn day_4_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let input = parse_day_4_input(lines);
     let mut picked_so_far = HashSet::<BingoCardNumber>::new();
     // all of the cards that have won so far
@@ -439,7 +439,7 @@ fn day_4_b(lines: &Vec<String>) -> Result<Answer> {
 }
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
-type Solution = fn(&Vec<String>) -> Result<Answer>;
+type Solution = fn(&Vec<String>) -> AdventResult<Answer>;
 
 /// Error that indicates there is no such problem.
 #[derive(Debug, Clone)]
@@ -455,7 +455,7 @@ impl fmt::Display for AdventError {
 
 impl std::error::Error for AdventError {}
 
-fn function_for_problem(problem_name: &str) -> Result<Solution> {
+fn function_for_problem(problem_name: &str) -> AdventResult<Solution> {
     match problem_name {
         "day-1-a" => Ok(day_1_a),
         "day-1-b" => Ok(day_1_b),
@@ -500,7 +500,7 @@ fn build_expected_answers() -> HashMap<String, Answer> {
 }
 
 /// Returns a list of all of the days we have input data sets for.
-fn all_days() -> Result<Vec<String>> {
+fn all_days() -> AdventResult<Vec<String>> {
     let mut result: Vec<String> = Vec::new();
     for entry in std::fs::read_dir("input")? {
         result.push(
@@ -519,7 +519,7 @@ fn all_days() -> Result<Vec<String>> {
 
 /// Returns a list of all of the prbolems, assuming each day
 /// has a "-a" and a "-b" version.
-fn all_problems() -> Result<Vec<String>> {
+fn all_problems() -> AdventResult<Vec<String>> {
     let mut result: Vec<String> = Vec::new();
     for day in all_days()? {
         result.push(format!("{}-a", day));
@@ -528,7 +528,7 @@ fn all_problems() -> Result<Vec<String>> {
     Ok(result)
 }
 
-fn run_problem(problem_name: &str) -> Result<()> {
+fn run_problem(problem_name: &str) -> AdventResult<()> {
     println!("\n########");
     println!("# {}", problem_name);
     println!("########\n");
@@ -564,7 +564,7 @@ fn run_problem(problem_name: &str) -> Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
+fn main() -> AdventResult<()> {
     // Parse the command-line argument to get the problem name to run, or "all"
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
