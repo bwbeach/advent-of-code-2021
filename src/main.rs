@@ -486,6 +486,8 @@ fn build_expected_answers() -> HashMap<String, Answer> {
     add("input/day-3-a/input.txt", 693486);
     add("input/day-3-b/sample.txt", 230);
     add("input/day-3-b/input.txt", 3379326);
+    add("input/day-4-a/sample.txt", 4512);
+    add("input/day-4-a/input.txt", 58374);
     result
 }
 
