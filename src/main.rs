@@ -316,6 +316,17 @@ impl BingoCard {
         }
         false
     }
+
+    /// Returns the store of a winning board
+    fn score(&self, all_drawn: &HashSet<BingoCardNumber>, last_draw: BingoCardNumber) -> u64 {
+        let unpicked_sum: u64 = self
+            .grid
+            .iter()
+            .filter(|&n| !all_drawn.contains(n))
+            .map(|&n| n as u64)
+            .sum();
+        unpicked_sum * (last_draw as u64)
+    }
 }
 
 #[test]
@@ -409,17 +420,11 @@ fn test_parse_day_4_input() {
 fn day_4_a(lines: &Vec<String>) -> Result<Answer> {
     let input = parse_day_4_input(lines);
     let mut picked_so_far = HashSet::<BingoCardNumber>::new();
-    for draw in input.called.iter() {
-        picked_so_far.insert(*draw);
+    for &draw in input.called.iter() {
+        picked_so_far.insert(draw);
         for card in input.cards.iter() {
             if card.is_bingo(&picked_so_far) {
-                let unpicked: u64 = card
-                    .grid
-                    .iter()
-                    .filter(|n| !picked_so_far.contains(n))
-                    .map(|n| *n as u64)
-                    .sum();
-                return Ok(unpicked * (*draw as u64));
+                return Ok(card.score(&picked_so_far, draw));
             }
         }
     }
