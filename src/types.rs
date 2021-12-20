@@ -1,5 +1,29 @@
+use std::fmt::{Display, Formatter};
+
 /// Result type used throughout Advent of Code
 pub type AdventResult<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+
+/// Error with a message
+#[derive(Debug, Clone)]
+pub struct AdventError {
+    message: String,
+}
+
+impl AdventError {
+    pub fn new(message: &str) -> AdventError {
+        AdventError {
+            message: message.to_string(),
+        }
+    }
+}
+
+impl Display for AdventError {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "AdventError: {}", self.message)
+    }
+}
+
+impl std::error::Error for AdventError {}
 
 /// The answer to each problem is a positive integer
 pub type Answer = u64;
