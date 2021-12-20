@@ -9,10 +9,9 @@ use std::str::FromStr;
 use itertools::{all, any};
 use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available for tests
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
+mod types;
 
-/// The answer to each problem is a positive integer
-type Answer = u64;
+use types::{Answer, Result};
 
 /// Returns a vector containing all of the lines in a file.Iterator
 ///
