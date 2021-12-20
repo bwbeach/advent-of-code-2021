@@ -14,7 +14,7 @@ use util::lines_in_file;
 
 /// Takes a vector of strings and converts them to u64
 fn lines_to_numbers(lines: &Vec<String>) -> AdventResult<Vec<u64>> {
-    let result: std::result::Result<Vec<u64>, std::num::ParseIntError> =
+    let result: Result<Vec<u64>, std::num::ParseIntError> =
         lines.iter().map(|s| s.parse()).collect();
     Ok(result?)
 }
@@ -78,7 +78,7 @@ enum SubmarineDirection {
 impl FromStr for SubmarineDirection {
     type Err = AdventError;
 
-    fn from_str(s: &str) -> std::result::Result<SubmarineDirection, Self::Err> {
+    fn from_str(s: &str) -> Result<SubmarineDirection, Self::Err> {
         match s {
             "up" => Ok(SubmarineDirection::Up),
             "down" => Ok(SubmarineDirection::Down),
@@ -99,7 +99,7 @@ struct SubmarineCommand {
 impl FromStr for SubmarineCommand {
     type Err = AdventError;
 
-    fn from_str(s: &str) -> std::result::Result<SubmarineCommand, Self::Err> {
+    fn from_str(s: &str) -> Result<SubmarineCommand, Self::Err> {
         let mut iter = s.split_whitespace();
         let direction: SubmarineDirection = iter.next().unwrap().parse()?;
         // TODO: translate error
