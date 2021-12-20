@@ -1,10 +1,10 @@
 use std::cmp::{max, min};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
 
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 struct Point {
     x: u16,
     y: u16,
@@ -58,6 +58,10 @@ fn range_inclusive(a: u16, b: u16) -> std::ops::Range<u16> {
 impl PointRange {
     fn new(p1: Point, p2: Point) -> PointRange {
         PointRange { p1, p2 }
+    }
+
+    fn is_horiz_or_vertical(&self) -> bool {
+        self.p1.x == self.p2.x || self.p1.y == self.p2.y
     }
 
     fn points(&self) -> Vec<Point> {
@@ -115,8 +119,18 @@ fn test_points_in_range() {
     );
 }
 
-fn day_5_a(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_5_a(lines: &Vec<String>) -> AdventResult<Answer> {
+    let mut point_to_count: HashMap<Point, u32> = HashMap::new();
+    for line in lines.iter() {
+        let point_range = PointRange::from_str(line)?;
+        if point_range.is_horiz_or_vertical() {
+            for point in point_range.points().iter() {
+                point_to_count.insert(*point, point_to_count.get(point).unwrap_or(&0) + 1);
+            }
+        }
+    }
+    let count = point_to_count.iter().filter(|(_, &v)| 1 < v).count();
+    Ok(count as u64)
 }
 
 fn day_5_b(_lines: &Vec<String>) -> AdventResult<Answer> {
@@ -126,7 +140,7 @@ fn day_5_b(_lines: &Vec<String>) -> AdventResult<Answer> {
 pub fn make_day_5() -> Day {
     Day::new(
         5,
-        DayPart::new(day_5_a, 4512, 58374),
+        DayPart::new(day_5_a, 5, 6311),
         DayPart::new(day_5_b, 1924, 11377),
     )
 }
