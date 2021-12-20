@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 use itertools::{all, any};
 use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available for tests
 
-use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
+use crate::types::{AdventResult, Answer, Day, DayPart};
 
 /// A number on a Day 4 bingo card
 type BingoCardNumber = u8;
