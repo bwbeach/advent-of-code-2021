@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
+use std::path::Path;
 use std::str::FromStr;
 
 use itertools::{all, any};
@@ -9,7 +10,7 @@ use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available 
 mod types;
 mod util;
 
-use types::{AdventResult, Answer};
+use types::{AdventResult, Answer, Day, DayPart};
 use util::lines_in_file;
 
 /// Takes a vector of strings and converts them to u64
@@ -66,6 +67,14 @@ fn day_1_b(lines: &Vec<String>) -> AdventResult<Answer> {
         }
     }
     Ok(count)
+}
+
+fn make_day_1() -> Day {
+    Day::new(
+        1,
+        DayPart::new(day_1_a, 7, 1233),
+        DayPart::new(day_1_b, 5, 1275),
+    )
 }
 
 #[derive(Debug, PartialEq)]
@@ -156,6 +165,14 @@ fn day_2_b(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(distance * depth)
 }
 
+fn make_day_2() -> Day {
+    Day::new(
+        2,
+        DayPart::new(day_2_a, 150, 1383564),
+        DayPart::new(day_2_b, 900, 1488311643),
+    )
+}
+
 fn day_3_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let number_of_bits = lines[0].len();
     let numbers: Vec<u64> = lines
@@ -227,6 +244,14 @@ fn day_3_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let co2_line = day_3_b_helper(lines, 0, false);
     let co2 = u64::from_str_radix(&co2_line, 2).unwrap();
     Ok(oxygen * co2)
+}
+
+fn make_day_3() -> Day {
+    Day::new(
+        3,
+        DayPart::new(day_3_a, 198, 693486),
+        DayPart::new(day_3_b, 230, 3379326),
+    )
 }
 
 /// A number on a Day 4 bingo card
@@ -438,8 +463,13 @@ fn day_4_b(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(0)
 }
 
-/// Solutions know how to take the input lines for a problem and produce the answer.
-type Solution = fn(&Vec<String>) -> AdventResult<Answer>;
+fn make_day_4() -> Day {
+    Day::new(
+        4,
+        DayPart::new(day_4_a, 4512, 58374),
+        DayPart::new(day_4_b, 1924, 11377),
+    )
+}
 
 /// Error that indicates there is no such problem.
 #[derive(Debug, Clone)]
@@ -455,134 +485,66 @@ impl fmt::Display for AdventError {
 
 impl std::error::Error for AdventError {}
 
-fn function_for_problem(problem_name: &str) -> AdventResult<Solution> {
-    match problem_name {
-        "day-1-a" => Ok(day_1_a),
-        "day-1-b" => Ok(day_1_b),
-        "day-2-a" => Ok(day_2_a),
-        "day-2-b" => Ok(day_2_b),
-        "day-3-a" => Ok(day_3_a),
-        "day-3-b" => Ok(day_3_b),
-        "day-4-a" => Ok(day_4_a),
-        "day-4-b" => Ok(day_4_b),
-        _ => Err(Box::new(AdventError {
-            message: format!("no such problem: {}", problem_name.escape_debug()),
-        })),
+fn run_once(
+    day_part: &DayPart,
+    input_dir: &str,
+    file_name: &str,
+    expected: Answer,
+) -> AdventResult<Answer> {
+    let path = format!("{}/{}", input_dir, file_name);
+    let lines = lines_in_file(Path::new(&path))?;
+    let answer = day_part.solve(&lines)?;
+    println!("{} -> {}", path, answer);
+    if answer != expected {
+        panic!("MISMATCH");
     }
+    Ok(answer)
 }
 
-/// Returns a mapping from problem/input to expected answer
-///
-/// Answers are added here after being checked against the advent of code
-/// web site.  These are used as regression tests when refactoring code.
-fn build_expected_answers() -> HashMap<String, Answer> {
-    let mut result = HashMap::new();
-    let mut add = |name: &str, answer: u64| {
-        result.insert(name.to_string(), answer);
-    };
-    add("input/day-1-a/sample.txt", 7);
-    add("input/day-1-a/input.txt", 1233);
-    add("input/day-1-b/sample.txt", 5);
-    add("input/day-1-b/input.txt", 1275);
-    add("input/day-2-a/sample.txt", 150);
-    add("input/day-2-a/input.txt", 1383564);
-    add("input/day-2-b/sample.txt", 900);
-    add("input/day-2-b/input.txt", 1488311643);
-    add("input/day-3-a/sample.txt", 198);
-    add("input/day-3-a/input.txt", 693486);
-    add("input/day-3-b/sample.txt", 230);
-    add("input/day-3-b/input.txt", 3379326);
-    add("input/day-4-a/sample.txt", 4512);
-    add("input/day-4-a/input.txt", 58374);
-    add("input/day-4-b/sample.txt", 1924);
-    add("input/day-4-b/input.txt", 11377);
-    result
-}
-
-/// Returns a list of all of the days we have input data sets for.
-fn all_days() -> AdventResult<Vec<String>> {
-    let mut result: Vec<String> = Vec::new();
-    for entry in std::fs::read_dir("input")? {
-        result.push(
-            entry?
-                .path()
-                .file_name()
-                .expect("file without name")
-                .to_str()
-                .expect("invalid file name")
-                .to_string(),
-        )
-    }
-    result.sort();
-    Ok(result)
-}
-
-/// Returns a list of all of the prbolems, assuming each day
-/// has a "-a" and a "-b" version.
-fn all_problems() -> AdventResult<Vec<String>> {
-    let mut result: Vec<String> = Vec::new();
-    for day in all_days()? {
-        result.push(format!("{}-a", day));
-        result.push(format!("{}-b", day));
-    }
-    Ok(result)
-}
-
-fn run_problem(problem_name: &str) -> AdventResult<()> {
+fn run_day_part(day: &Day, is_first_part: bool) -> AdventResult<()> {
     println!("\n########");
-    println!("# {}", problem_name);
+    println!("# {} part {}", day, if is_first_part { "A" } else { "B" });
     println!("########\n");
-    let solution = function_for_problem(problem_name)?;
-    let end = problem_name.len() - 2;
-    let day_name = &problem_name[0..end];
-    let input_dir = format!("input/{}", day_name.to_string());
-    println!("Input dir: {}", input_dir);
-    for entry in std::fs::read_dir(input_dir)? {
-        let path = entry?.path();
-        println!("Reading file: {}", path.display());
-        let lines = lines_in_file(&path)?;
-        let answer = solution(&lines)?;
-        println!("answer: {}", answer);
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        let expected_answer_name = format!("input/{}/{}", problem_name, file_name);
-        let expected_answers = build_expected_answers();
-        match expected_answers.get(&expected_answer_name) {
-            Some(expected_answer) => {
-                println!("Expected {}", *expected_answer);
-                if *expected_answer != answer {
-                    println!("Mismatch: {} {}", answer, *expected_answer);
-                    return Err(Box::new(AdventError {
-                        message: "wrong answer".to_string(),
-                    }));
-                } else {
-                    println!("match");
-                }
-            }
-            None => {}
-        }
-    }
+    let input_dir = day.input_dir();
+    let day_part = if is_first_part {
+        &day.part_a
+    } else {
+        &day.part_b
+    };
+    run_once(day_part, &input_dir, "sample.txt", day_part.sample_answer)?;
+    run_once(day_part, &input_dir, "input.txt", day_part.full_answer)?;
+    Ok(())
+}
+
+fn run_day(day: &Day) -> AdventResult<()> {
+    run_day_part(day, true)?;
+    run_day_part(day, false)?;
     Ok(())
 }
 
 fn main() -> AdventResult<()> {
+    // All the days
+    let days = vec![make_day_1(), make_day_2(), make_day_3(), make_day_4()];
+
     // Parse the command-line argument to get the problem name to run, or "all"
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        println!("Usage: advent <problemName>");
+        println!("Usage: advent [<dayNumber>|all]");
         std::process::exit(1);
     }
 
     // Figure out which problems to run
     let problem_name = &args[1];
-    let problems_to_run = if problem_name == "all" {
-        all_problems()?
+    let problems_to_run: Vec<&Day> = if problem_name == "all" {
+        days.iter().collect()
     } else {
-        vec![problem_name.clone()]
+        let day_number: usize = args[1].parse().unwrap();
+        vec![&days[day_number - 1]]
     };
 
     // Run them
-    for name in problems_to_run {
-        match run_problem(&name) {
+    for day in problems_to_run.iter() {
+        match run_day(day) {
             Err(x) => return Err(x),
             Ok(_) => {}
         }
