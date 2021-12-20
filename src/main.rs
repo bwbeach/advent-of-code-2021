@@ -1,29 +1,16 @@
 use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
-use std::fs::File;
-use std::io::{prelude::*, BufReader};
-use std::path::Path;
 use std::str::FromStr;
 
 use itertools::{all, any};
 use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available for tests
 
 mod types;
+mod util;
 
 use types::{Answer, Result};
-
-/// Returns a vector containing all of the lines in a file.Iterator
-///
-fn lines_in_file(path: &Path) -> Result<Vec<String>> {
-    let file = File::open(path)?;
-    let lines = BufReader::new(file).lines();
-    let mut result: Vec<String> = Vec::new();
-    for line in lines {
-        result.push(line?);
-    }
-    Ok(result)
-}
+use util::lines_in_file;
 
 /// Takes a vector of strings and converts them to u64
 fn lines_to_numbers(lines: &Vec<String>) -> Result<Vec<u64>> {
