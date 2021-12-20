@@ -433,7 +433,22 @@ fn day_4_a(lines: &Vec<String>) -> Result<Answer> {
 
 fn day_4_b(lines: &Vec<String>) -> Result<Answer> {
     let input = parse_day_4_input(lines);
-    println!("{:?}", input.called.len());
+    let mut picked_so_far = HashSet::<BingoCardNumber>::new();
+    // all of the cards that have won so far
+    let mut winners = HashSet::<usize>::new();
+    for &draw in input.called.iter() {
+        picked_so_far.insert(draw);
+        for (i, card) in input.cards.iter().enumerate() {
+            if !winners.contains(&i) {
+                if card.is_bingo(&picked_so_far) {
+                    winners.insert(i);
+                    if winners.len() == input.cards.len() {
+                        return Ok(card.score(&picked_so_far, draw));
+                    }
+                }
+            }
+        }
+    }
     Ok(0)
 }
 
@@ -493,6 +508,8 @@ fn build_expected_answers() -> HashMap<String, Answer> {
     add("input/day-3-b/input.txt", 3379326);
     add("input/day-4-a/sample.txt", 4512);
     add("input/day-4-a/input.txt", 58374);
+    add("input/day-4-b/sample.txt", 1924);
+    add("input/day-4-b/input.txt", 11377);
     result
 }
 
