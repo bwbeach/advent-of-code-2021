@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt;
 use std::fs::File;
@@ -6,7 +6,8 @@ use std::io::{prelude::*, BufReader};
 use std::path::Path;
 use std::str::FromStr;
 
-use ndarray::{arr2, Array2}; // TODO: fix unused warning, and keep available for tests
+use itertools::{all, any};
+use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available for tests
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
@@ -206,7 +207,7 @@ fn most_common_bit_in_column(numbers: &Vec<String>, index: usize) -> char {
 }
 
 #[test]
-fn test_most_common_bin_in_column() {
+fn test_most_common_bit_in_column() {
     let data = vec![
         "0001".to_string(),
         "0011".to_string(),
@@ -296,6 +297,42 @@ struct BingoCard {
     grid: Array2<BingoCardNumber>,
 }
 
+impl BingoCard {
+    /// Returns the number of rows/columns in the card
+    fn size(&self) -> usize {
+        // this assumes that the grid is square.  TODO: add asserting to struct to say that
+        self.grid.shape()[0]
+    }
+
+    /// Returns true iff the numbers given complete any row or column
+    fn is_bingo(&self, drawn: &HashSet<BingoCardNumber>) -> bool {
+        for i in 0..self.size() {
+            if all(self.grid.slice(s![i, ..]), |n| drawn.contains(n)) {
+                return true;
+            }
+            if all(self.grid.slice(s![.., i]), |n| drawn.contains(n)) {
+                return true;
+            }
+        }
+        false
+    }
+}
+
+#[test]
+fn test_is_bingo() {
+    fn make_set(items: &[BingoCardNumber]) -> HashSet<BingoCardNumber> {
+        items.iter().map(|&n| n).collect()
+    }
+    let card = BingoCard {
+        grid: arr2(&[[1, 2], [3, 4]]),
+    };
+    assert_eq!(false, card.is_bingo(&make_set(&[])));
+    assert_eq!(false, card.is_bingo(&make_set(&[1])));
+    assert_eq!(false, card.is_bingo(&make_set(&[1, 4])));
+    assert_eq!(true, card.is_bingo(&make_set(&[1, 2])));
+    assert_eq!(true, card.is_bingo(&make_set(&[1, 3])));
+}
+
 fn parse_bingo_card(lines: &Vec<String>) -> BingoCard {
     let size = lines.len();
     let mut grid = Array2::<BingoCardNumber>::zeros((size, size));
@@ -371,13 +408,27 @@ fn test_parse_day_4_input() {
 
 fn day_4_a(lines: &Vec<String>) -> Result<Answer> {
     let input = parse_day_4_input(lines);
-    println!("{:?}", input);
+    let mut picked_so_far = HashSet::<BingoCardNumber>::new();
+    for draw in input.called.iter() {
+        picked_so_far.insert(*draw);
+        for card in input.cards.iter() {
+            if card.is_bingo(&picked_so_far) {
+                let unpicked: u64 = card
+                    .grid
+                    .iter()
+                    .filter(|n| !picked_so_far.contains(n))
+                    .map(|n| *n as u64)
+                    .sum();
+                return Ok(unpicked * (*draw as u64));
+            }
+        }
+    }
     Ok(0)
 }
 
 fn day_4_b(lines: &Vec<String>) -> Result<Answer> {
     let input = parse_day_4_input(lines);
-    println!("{:?}", input);
+    println!("{:?}", input.called.len());
     Ok(0)
 }
 
