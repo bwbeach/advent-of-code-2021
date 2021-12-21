@@ -51,8 +51,12 @@ struct PointRange {
     p2: Point,
 }
 
-fn range_inclusive(a: u16, b: u16) -> std::ops::Range<u16> {
-    min(a, b)..(max(a, b) + 1)
+fn range_inclusive(a: u16, b: u16) -> Box<dyn Iterator<Item = u16>> {
+    if a <= b {
+        Box::new(a..=b)
+    } else {
+        Box::new((b..=a).rev())
+    }
 }
 
 impl PointRange {
@@ -74,7 +78,13 @@ impl PointRange {
                 .map(|x| Point::new(x, self.p1.y))
                 .collect()
         } else {
-            panic!("bad point range: {:?}", self)
+            let x_range = range_inclusive(self.p1.x, self.p2.x);
+            let y_range = range_inclusive(self.p1.y, self.p2.y);
+            // TODO: panic if ranges are not the same length
+            x_range
+                .zip(y_range)
+                .map(|(x, y)| Point::new(x, y))
+                .collect()
         }
     }
 }
@@ -110,12 +120,16 @@ fn test_points_in_range() {
         PointRange::from_str("1,5 -> 2,5").unwrap().points()
     );
     assert_eq!(
-        vec![Point::new(1, 5), Point::new(2, 5)],
+        vec![Point::new(2, 5), Point::new(1, 5)],
         PointRange::from_str("2,5 -> 1,5").unwrap().points()
     );
     assert_eq!(
         vec![Point::new(5, 1), Point::new(5, 2)],
         PointRange::from_str("5,1 -> 5,2").unwrap().points()
+    );
+    assert_eq!(
+        vec![Point::new(1, 9), Point::new(2, 8), Point::new(3, 7)],
+        PointRange::from_str("1,9 -> 3,7").unwrap().points()
     );
 }
 
@@ -133,14 +147,22 @@ fn day_5_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(count as u64)
 }
 
-fn day_5_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_5_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    let mut point_to_count: HashMap<Point, u32> = HashMap::new();
+    for line in lines.iter() {
+        let point_range = PointRange::from_str(line)?;
+        for point in point_range.points().iter() {
+            point_to_count.insert(*point, point_to_count.get(point).unwrap_or(&0) + 1);
+        }
+    }
+    let count = point_to_count.iter().filter(|(_, &v)| 1 < v).count();
+    Ok(count as u64)
 }
 
 pub fn make_day_5() -> Day {
     Day::new(
         5,
         DayPart::new(day_5_a, 5, 6311),
-        DayPart::new(day_5_b, 1924, 11377),
+        DayPart::new(day_5_b, 12, 19929),
     )
 }
