@@ -6,6 +6,7 @@ mod day2;
 mod day3;
 mod day4;
 mod day5;
+mod day6;
 mod types;
 mod util;
 
@@ -57,6 +58,7 @@ fn main() -> AdventResult<()> {
         day3::make_day_3(),
         day4::make_day_4(),
         day5::make_day_5(),
+        day6::make_day_6(),
     ];
 
     // Parse the command-line argument to get the problem name to run, or "all"
