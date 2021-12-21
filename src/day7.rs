@@ -34,7 +34,7 @@ fn part_b_total_cost(positions: &Vec<i32>, chosen: i32) -> i32 {
 /// Same as day_7_a, but the cost function is (n + n^2) / 2
 ///
 /// I don't know how to derive the answer mathematically, so we'll
-/// just start in the middle and
+/// just try all the possibilities until we find the answer.
 ///
 fn day_7_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let positions: Vec<i32> = lines[0].split(",").map(|s| s.parse().unwrap()).collect();
