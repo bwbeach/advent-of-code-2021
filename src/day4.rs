@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use itertools::{all, any};
-use ndarray::{arr2, s, Array2}; // TODO: fix unused warning, and keep available for tests
+use itertools::all;
+use ndarray::{s, Array2}; // TODO: fix unused warning, and keep available for tests
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
@@ -97,7 +97,7 @@ fn test_is_bingo() {
         items.iter().map(|&n| n).collect()
     }
     let card = BingoCard {
-        grid: arr2(&[[1, 2], [3, 4]]),
+        grid: ndarray::arr2(&[[1, 2], [3, 4]]),
     };
     assert_eq!(false, card.is_bingo(&make_set(&[])));
     assert_eq!(false, card.is_bingo(&make_set(&[1])));
@@ -122,7 +122,7 @@ fn parse_bingo_card(lines: &Vec<String>) -> BingoCard {
 fn test_parse_bingo_card() {
     assert_eq!(
         BingoCard {
-            grid: arr2(&[[1, 2], [3, 4]])
+            grid: ndarray::arr2(&[[1, 2], [3, 4]])
         },
         parse_bingo_card(&vec!("1 2".to_string(), " 3  4 ".to_string()))
     )
@@ -168,10 +168,10 @@ fn test_parse_day_4_input() {
             called: vec![13, 15],
             cards: vec![
                 BingoCard {
-                    grid: arr2(&[[1, 2], [3, 4]])
+                    grid: ndarray::arr2(&[[1, 2], [3, 4]])
                 },
                 BingoCard {
-                    grid: arr2(&[[5, 6], [7, 8]])
+                    grid: ndarray::arr2(&[[5, 6], [7, 8]])
                 }
             ]
         },

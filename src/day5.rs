@@ -1,5 +1,4 @@
-use std::cmp::{max, min};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::str::FromStr;
 
 use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
@@ -18,7 +17,7 @@ impl Point {
 
 #[test]
 fn test_set_of_points() {
-    let mut points: HashSet<Point> = HashSet::new();
+    let mut points: std::collections::HashSet<Point> = std::collections::HashSet::new();
     points.insert(Point::new(1, 2));
     assert_eq!(true, points.contains(&Point::new(1, 2)));
     assert_eq!(false, points.contains(&Point::new(99, 99)));
@@ -97,10 +96,10 @@ impl FromStr for PointRange {
         if parts.len() != 2 {
             Err(AdventError::new("bad point range"))
         } else {
-            Ok(PointRange {
-                p1: Point::from_str(&parts[0]).unwrap(),
-                p2: Point::from_str(&parts[1]).unwrap(),
-            })
+            Ok(PointRange::new(
+                Point::from_str(&parts[0]).unwrap(),
+                Point::from_str(&parts[1]).unwrap(),
+            ))
         }
     }
 }
