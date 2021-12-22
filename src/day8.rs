@@ -187,16 +187,8 @@ fn solve_one_line(input: &InputLine) -> Vec<u8> {
     // Now we can assign the rest, based on the mappings for 2, 3, 4, and 7.
     for &sample in input.samples.iter() {
         match sample_and_mapping_to_digit(sample, &mapping) {
-            Some(digit) => {
-                println!(
-                    "FOUND {:?}: {:?} {:?} {:?}",
-                    digit, sample, sample.count, mapping
-                );
-                mapping[digit] = sample
-            }
-            _ => {
-                println!("NOTHING: {:?} {:?} {:?}", sample, sample.count, mapping);
-            }
+            Some(digit) => mapping[digit] = sample,
+            _ => {}
         }
     }
 
@@ -208,10 +200,6 @@ fn solve_one_line(input: &InputLine) -> Vec<u8> {
             }
         }
         panic!("No mapping found for: {:?}", output);
-    }
-
-    for i in 0..10 {
-        println!("{:?} = {:?}", i, mapping[i])
     }
 
     input
@@ -240,14 +228,37 @@ fn day_8_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(count as u64)
 }
 
-fn day_8_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+/// Converts a vector of base 10 digits into a number.
+///
+/// [1, 2 ,3] becomes 123
+///
+fn vector_to_number(digits: &Vec<u8>) -> u64 {
+    let mut result = 0;
+    for &d in digits {
+        result = result * 10 + (d as u64);
+    }
+    result
+}
+
+#[test]
+fn test_vector_to_number() {
+    assert_eq!(1234, vector_to_number(&vec![1, 2, 3, 4]));
+}
+
+fn day_8_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    let total: u64 = lines
+        .iter()
+        .map(|line| InputLine::from_str(line).unwrap())
+        .map(|input_line| solve_one_line(&input_line))
+        .map(|v| vector_to_number(&v))
+        .sum();
+    Ok(total)
 }
 
 pub fn make_day_8() -> Day {
     Day::new(
         8,
         DayPart::new(day_8_a, 26, 383),
-        DayPart::new(day_8_b, 0, 0),
+        DayPart::new(day_8_b, 61229, 998900),
     )
 }
