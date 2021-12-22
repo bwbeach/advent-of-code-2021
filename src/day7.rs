@@ -1,4 +1,3 @@
-use math::round::half_up;
 use num::abs;
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
@@ -58,6 +57,6 @@ pub fn make_day_7() -> Day {
     Day::new(
         7,
         DayPart::new(day_7_a, 37, 353800),
-        DayPart::new(day_7_b, 168, 0),
+        DayPart::new(day_7_b, 168, 98119739),
     )
 }
