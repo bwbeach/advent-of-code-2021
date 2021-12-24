@@ -223,17 +223,12 @@ fn day_9_b(lines: &Vec<String>) -> AdventResult<Answer> {
     let mut basin_to_count: HashMap<Point, usize> = HashMap::new();
     for x in 0..width {
         for y in 0..height {
-            // TODO: figure out "if let ..."
-            match find_basin(&grid, (x, y)) {
-                Some(point) => {
-                    // TODO: player_stats.entry(point).or_insert(0);
-                    basin_to_count.insert(point, basin_to_count.get(&point).unwrap_or(&0) + 1);
-                }
-                _ => {}
+            if let Some(point) = find_basin(&grid, (x, y)) {
+                let entry = basin_to_count.entry(point).or_insert(0);
+                *entry += 1;
             }
         }
     }
-    // TODO: is there a way to skip the deref mapping
     let mut counts: Vec<Answer> = basin_to_count.values().map(|&n| n as Answer).collect();
     counts.sort();
     Ok(counts.iter().rev().take(3).product())
