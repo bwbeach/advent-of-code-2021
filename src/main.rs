@@ -2,6 +2,7 @@ use std::env;
 use std::path::Path;
 
 mod day1;
+mod day10;
 mod day2;
 mod day3;
 mod day4;
@@ -65,6 +66,7 @@ fn main() -> AdventResult<()> {
         day7::make_day_7(),
         day8::make_day_8(),
         day9::make_day_9(),
+        day10::make_day_10(),
     ];
 
     // Parse the command-line argument to get the problem name to run, or "all"
