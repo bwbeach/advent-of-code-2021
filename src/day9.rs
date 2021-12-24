@@ -103,26 +103,6 @@ impl Grid {
             i: 0,
         }
     }
-
-    fn is_low_spot(&self, x: usize, y: usize) -> bool {
-        // The value at the position in question
-        let value = self.values[(x, y)];
-
-        // Check each neighbor cell
-        self.neigbors((x, y))
-            .all(|neighbor| value < self.values[neighbor])
-    }
-}
-
-#[test]
-fn test_is_low_spot() {
-    let values = ndarray::arr2(&[[1, 2, 3], [3, 0, 3], [3, 2, 1]]);
-    let grid = Grid { values };
-    for x in 0..3 {
-        for y in 0..3 {
-            assert_eq!(x == y, grid.is_low_spot(x, y));
-        }
-    }
 }
 
 impl fmt::Debug for Grid {
@@ -164,13 +144,33 @@ fn test_parse_format_grid() {
     assert_eq!("1 2 3\n4 5 6\n", format!("{:?}", grid));
 }
 
+fn is_low_spot(grid: &Grid, pos: Point) -> bool {
+    // The value at the position in question
+    let value = grid.values[pos];
+
+    // Check each neighbor cell
+    grid.neigbors(pos)
+        .all(|neighbor| value < grid.values[neighbor])
+}
+
+#[test]
+fn test_is_low_spot() {
+    let values = ndarray::arr2(&[[1, 2, 3], [3, 0, 3], [3, 2, 1]]);
+    let grid = Grid { values };
+    for x in 0..3 {
+        for y in 0..3 {
+            assert_eq!(x == y, is_low_spot(&grid, (x, y)));
+        }
+    }
+}
+
 fn day_9_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let grid = parse_grid(lines);
     let (columns, rows) = grid.shape();
     let mut score = 0;
     for y in 0..rows {
         for x in 0..columns {
-            if grid.is_low_spot(x, y) {
+            if is_low_spot(&grid, (x, y)) {
                 score += 1 + (grid.values[(x, y)] as u64);
             }
         }
