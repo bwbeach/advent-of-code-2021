@@ -153,6 +153,11 @@ impl Grid {
     pub fn get(&self, pos: Point) -> u8 {
         self.values[pos]
     }
+
+    pub fn set(&mut self, pos: Point, new_value: u8) {
+        self.values[pos] = new_value;
+    }
+
     pub fn shape(&self) -> (usize, usize) {
         let shape = self.values.shape();
         let columns = shape[0];
