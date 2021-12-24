@@ -1,9 +1,13 @@
 use ndarray::{Array, ArrayBase, Dim, OwnedRepr, ShapeBuilder};
+use std::collections::HashMap;
 use std::fmt;
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-/// Represents the neighbors of a cell in a grid
+/// One point in a grid
+type Point = (usize, usize);
+
+/// State for the iterator over the neighbors of a cell in a grid
 struct Neighbors {
     // the size of the grid
     width: usize,
@@ -174,14 +178,71 @@ fn day_9_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(score)
 }
 
-fn day_9_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+/// Given a point, keeps going down to find the low point in
+/// the basin, and return that.
+fn find_basin(grid: &Grid, point: Point) -> Option<Point> {
+    if grid.values[point] == 9 {
+        return None;
+    }
+    let mut current = point;
+    loop {
+        let current_value = grid.values[current];
+        // The problem doesn't explicitly say what to do if there
+        // are multiple neighbors that are lower.  We'll just assume
+        // that they all go to the same low point, and use the firt one.
+        let lower: Option<Point> = grid
+            .neigbors(current)
+            .filter(|&p| grid.values[p] < current_value)
+            .next();
+        match lower {
+            Some(p) => current = p,
+            None => return Some(current),
+        }
+    }
+}
+
+#[test]
+fn test_find_basin() {
+    let grid = parse_grid(&vec![
+        "123".to_string(),
+        "994".to_string(),
+        "129".to_string(),
+    ]);
+    println!("{:?}", grid);
+    assert_eq!(Some((0, 0)), find_basin(&grid, (0, 0)));
+    assert_eq!(Some((0, 0)), find_basin(&grid, (1, 0)));
+    assert_eq!(Some((0, 0)), find_basin(&grid, (2, 0)));
+    assert_eq!(Some((0, 0)), find_basin(&grid, (2, 1)));
+    assert_eq!(Some((0, 2)), find_basin(&grid, (1, 2)));
+    assert_eq!((None), find_basin(&grid, (1, 1)));
+}
+
+fn day_9_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    let grid = parse_grid(lines);
+    let (width, height) = grid.shape();
+    let mut basin_to_count: HashMap<Point, usize> = HashMap::new();
+    for x in 0..width {
+        for y in 0..height {
+            // TODO: figure out "if let ..."
+            match find_basin(&grid, (x, y)) {
+                Some(point) => {
+                    // TODO: player_stats.entry(point).or_insert(0);
+                    basin_to_count.insert(point, basin_to_count.get(&point).unwrap_or(&0) + 1);
+                }
+                _ => {}
+            }
+        }
+    }
+    // TODO: is there a way to skip the deref mapping
+    let mut counts: Vec<Answer> = basin_to_count.values().map(|&n| n as Answer).collect();
+    counts.sort();
+    Ok(counts.iter().rev().take(3).product())
 }
 
 pub fn make_day_9() -> Day {
     Day::new(
         9,
         DayPart::new(day_9_a, 15, 506),
-        DayPart::new(day_9_b, 0, 0),
+        DayPart::new(day_9_b, 1134, 931200),
     )
 }
