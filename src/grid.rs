@@ -79,10 +79,13 @@ fn test_neighbors() {
 
 #[derive(PartialEq)]
 pub struct Grid {
-    pub values: ArrayBase<OwnedRepr<u8>, Dim<[usize; 2]>>,
+    values: ArrayBase<OwnedRepr<u8>, Dim<[usize; 2]>>,
 }
 
 impl Grid {
+    pub fn get(&self, pos: Point) -> u8 {
+        self.values[pos]
+    }
     pub fn shape(&self) -> (usize, usize) {
         let shape = self.values.shape();
         let columns = shape[0];

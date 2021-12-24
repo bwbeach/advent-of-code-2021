@@ -5,17 +5,20 @@ use crate::types::{AdventResult, Answer, Day, DayPart};
 
 fn is_low_spot(grid: &Grid, pos: Point) -> bool {
     // The value at the position in question
-    let value = grid.values[pos];
+    let value = grid.get(pos);
 
     // Check each neighbor cell
     grid.neigbors(pos)
-        .all(|neighbor| value < grid.values[neighbor])
+        .all(|neighbor| value < grid.get(neighbor))
 }
 
 #[test]
 fn test_is_low_spot() {
-    let values = ndarray::arr2(&[[1, 2, 3], [3, 0, 3], [3, 2, 1]]);
-    let grid = Grid { values };
+    let grid = parse_grid(&vec![
+        "123".to_string(),
+        "303".to_string(),
+        "321".to_string(),
+    ]);
     for x in 0..3 {
         for y in 0..3 {
             assert_eq!(x == y, is_low_spot(&grid, (x, y)));
@@ -30,7 +33,7 @@ fn day_9_a(lines: &Vec<String>) -> AdventResult<Answer> {
     for y in 0..rows {
         for x in 0..columns {
             if is_low_spot(&grid, (x, y)) {
-                score += 1 + (grid.values[(x, y)] as u64);
+                score += 1 + (grid.get((x, y)) as u64);
             }
         }
     }
@@ -40,18 +43,18 @@ fn day_9_a(lines: &Vec<String>) -> AdventResult<Answer> {
 /// Given a point, keeps going down to find the low point in
 /// the basin, and return that.
 fn find_basin(grid: &Grid, point: Point) -> Option<Point> {
-    if grid.values[point] == 9 {
+    if grid.get(point) == 9 {
         return None;
     }
     let mut current = point;
     loop {
-        let current_value = grid.values[current];
+        let current_value = grid.get(current);
         // The problem doesn't explicitly say what to do if there
         // are multiple neighbors that are lower.  We'll just assume
         // that they all go to the same low point, and use the firt one.
         let lower: Option<Point> = grid
             .neigbors(current)
-            .filter(|&p| grid.values[p] < current_value)
+            .filter(|&p| grid.get(p) < current_value)
             .next();
         match lower {
             Some(p) => current = p,
