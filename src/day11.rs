@@ -88,14 +88,23 @@ fn day_11_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(flash_count)
 }
 
-fn day_11_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_11_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    let mut grid = parse_grid(lines);
+    let (width, height) = grid.shape();
+    let octopus_count = (width * height) as Answer;
+    let mut step_count = 0;
+    loop {
+        step_count += 1;
+        if one_step(&mut grid) == octopus_count {
+            return Ok(step_count);
+        }
+    }
 }
 
 pub fn make_day_11() -> Day {
     Day::new(
         11,
         DayPart::new(day_11_a, 1656, 1617),
-        DayPart::new(day_11_b, 0, 0),
+        DayPart::new(day_11_b, 195, 258),
     )
 }
