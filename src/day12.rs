@@ -9,7 +9,10 @@ use crate::types::{AdventResult, Answer, Day, DayPart};
 ///
 #[derive(Debug, PartialEq)]
 struct Graph<'a> {
+    // May from a node to the places you can get to from it.
     edges: HashMap<&'a str, HashSet<&'a str>>,
+
+    // Constant empty set to return from neighbors() when there are no neighbors.
     no_neighbors: HashSet<&'a str>,
 }
 
@@ -18,13 +21,6 @@ impl<'a, 'b> Graph<'a> {
         Graph {
             edges: HashMap::new(),
             no_neighbors: HashSet::new(),
-        }
-    }
-
-    fn has_edge(&self, a: &str, b: &str) -> bool {
-        match self.edges.get(a) {
-            Some(targets) => targets.contains(b),
-            None => false,
         }
     }
 
@@ -62,12 +58,13 @@ fn test_parse_graph() {
     let lines = vec!["a-b".to_string(), "c-b".to_string()];
     let graph = parse_graph(&lines);
 
-    assert_eq!(true, graph.has_edge("a", "b"));
-    assert_eq!(false, graph.has_edge("a", "c"));
-    assert_eq!(true, graph.has_edge("b", "a"));
-    assert_eq!(true, graph.has_edge("b", "c"));
-    assert_eq!(false, graph.has_edge("c", "a"));
-    assert_eq!(true, graph.has_edge("c", "b"));
+    fn make_set<'a>(items: &[&'a str]) -> HashSet<&'a str> {
+        items.iter().map(|&n| n).collect()
+    }
+
+    assert_eq!(&make_set(&["b"]), graph.neighbors("a"));
+    assert_eq!(&make_set(&["a", "c"]), graph.neighbors("b"));
+    assert_eq!(&make_set(&["b"]), graph.neighbors("c"));
 }
 
 /// Is the room big?
