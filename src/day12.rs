@@ -72,18 +72,28 @@ fn is_big(room: &str) -> bool {
     room.chars().next().unwrap().is_uppercase()
 }
 
+/// Function that tests whether it's OK to visit a node.
+type CanVisitFn = fn(node: &str, stack: &Vec<&str>, have_repeated: bool) -> bool;
+
 /// Counts the number of paths from the current room to "end" that
 /// do to visit any of the rooms in the stack, or any new rooms
 /// that are not big.
-fn paths_to_end<'a, 'b>(cave: &'a Graph, current: &'a str, stack: &'b mut Vec<&'a str>) -> Answer {
+fn paths_to_end<'a, 'b>(
+    cave: &'a Graph,
+    current: &'a str,
+    stack: &'b mut Vec<&'a str>,
+    have_repeated: bool,
+    can_visit: CanVisitFn,
+) -> Answer {
     if current == "end" {
         1
     } else {
         let mut count = 0;
         for next in cave.neighbors(current) {
-            if is_big(next) || !stack.contains(next) {
+            let is_repeat = !is_big(next) && stack.contains(next);
+            if can_visit(next, stack, have_repeated) {
                 stack.push(next);
-                count += paths_to_end(cave, next, stack);
+                count += paths_to_end(cave, next, stack, have_repeated || is_repeat, can_visit);
                 stack.pop();
             }
         }
@@ -93,17 +103,32 @@ fn paths_to_end<'a, 'b>(cave: &'a Graph, current: &'a str, stack: &'b mut Vec<&'
 
 fn day_12_a(lines: &Vec<String>) -> AdventResult<Answer> {
     let graph = parse_graph(lines);
-    Ok(paths_to_end(&graph, "start", &mut vec!["start"]))
+    Ok(paths_to_end(
+        &graph,
+        "start",
+        &mut vec!["start"],
+        false,
+        |node, stack, _| is_big(node) || !stack.contains(&node),
+    ))
 }
 
-fn day_12_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_12_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    let graph = parse_graph(lines);
+    Ok(paths_to_end(
+        &graph,
+        "start",
+        &mut vec!["start"],
+        false,
+        |node, stack, have_repeated| {
+            node != "start" && (is_big(node) || !have_repeated || !stack.contains(&node))
+        },
+    ))
 }
 
 pub fn make_day_12() -> Day {
     Day::new(
         12,
         DayPart::new(day_12_a, 10, 4792),
-        DayPart::new(day_12_b, 0, 0),
+        DayPart::new(day_12_b, 36, 133360),
     )
 }
