@@ -140,11 +140,10 @@ fn test_one_step() {
     assert_eq!(parse_state("ABCD"), one_step(&parse_state("ABD"), &rules));
 }
 
-fn day_14_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_14(lines: &Vec<String>, step_count: usize) -> AdventResult<Answer> {
     let input = parse_input(lines);
     let mut current = input.initial_state.clone();
-    for _ in 0..10 {
-        // println!("{:?}: {:?}", i, current);
+    for _ in 0..step_count {
         current = one_step(&current, &input.rules);
     }
 
@@ -163,14 +162,18 @@ fn day_14_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(max_count - min_count)
 }
 
-fn day_14_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_14_a(lines: &Vec<String>) -> AdventResult<Answer> {
+    day_14(lines, 10)
+}
+
+fn day_14_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    day_14(lines, 40)
 }
 
 pub fn make_day_14() -> Day {
     Day::new(
         14,
         DayPart::new(day_14_a, 1588, 2112),
-        DayPart::new(day_14_b, 0, 0),
+        DayPart::new(day_14_b, 2188189693529, 3243771149914),
     )
 }
