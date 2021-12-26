@@ -4,6 +4,19 @@ use std::fmt;
 /// One point in a grid
 pub type Point = (usize, usize);
 
+pub fn parse_point(s: &str) -> Point {
+    let mut parts = s.split(",");
+    (
+        parts.next().unwrap().parse().unwrap(),
+        parts.next().unwrap().parse().unwrap(),
+    )
+}
+
+#[test]
+fn test_parse_point() {
+    assert_eq!((3, 7), parse_point("3,7"));
+}
+
 /// State for the iterator over the neighbors of a cell in a grid
 pub struct Neighbors {
     // the size of the grid

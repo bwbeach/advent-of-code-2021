@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10.3"
+lazy_static = "1.4.0"
 libmath = "0.1.4"
 ndarray = "0.15.4"
 num = "0.1.42"
+regex = "1"
