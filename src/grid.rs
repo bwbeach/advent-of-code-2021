@@ -163,6 +163,11 @@ pub struct Grid {
 }
 
 impl Grid {
+    pub fn zeros(shape: (usize, usize)) -> Grid {
+        let values = ArrayBase::zeros(shape);
+        Grid { values }
+    }
+
     pub fn get(&self, pos: Point) -> u8 {
         self.values[pos]
     }

@@ -70,14 +70,46 @@ fn day_15_a(lines: &Vec<String>) -> AdventResult<Answer> {
     lowest_cost(&cost_to_enter)
 }
 
-fn day_15_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_15_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    // The input grid is the cost to enter each cell
+    let original = parse_grid(lines);
+    let original_shape = original.shape();
+    let original_width = original_shape.0;
+    let original_height = original_shape.1;
+
+    // When adding one to get an expanded value, the numbers wrap from 9 back to 1
+    fn next_value(v: u8) -> u8 {
+        if v == 9 {
+            1
+        } else {
+            v + 1
+        }
+    }
+
+    // Expand by a factor of 5 in each direction
+    let width = original_width * 5;
+    let height = original_height * 5;
+    let shape = (width, height);
+    let mut expanded = Grid::zeros(shape);
+    for y in 0..height {
+        for x in 0..width {
+            let pos = (x, y);
+            if original_height <= y {
+                expanded.set(pos, next_value(expanded.get((x, y - original_height))));
+            } else if original_width <= x {
+                expanded.set(pos, next_value(expanded.get((x - original_width, y))));
+            } else {
+                expanded.set(pos, original.get((x, y)));
+            }
+        }
+    }
+    lowest_cost(&expanded)
 }
 
 pub fn make_day_15() -> Day {
     Day::new(
         15,
         DayPart::new(day_15_a, 40, 589),
-        DayPart::new(day_15_b, 0, 0),
+        DayPart::new(day_15_b, 315, 2885),
     )
 }
