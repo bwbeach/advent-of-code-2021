@@ -106,14 +106,41 @@ fn day_13_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(points.len() as u64)
 }
 
-fn day_13_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn print_point_grid(points: &HashSet<Point>) {
+    let max_x = points.iter().map(|p| p.0).max().unwrap();
+    let max_y = points.iter().map(|p| p.1).max().unwrap();
+    for y in 0..=max_y {
+        for x in 0..=max_x {
+            if points.contains(&(x, y)) {
+                print!("#");
+            } else {
+                print!(".");
+            }
+        }
+        println!("");
+    }
+    println!("--------");
+}
+
+fn day_13_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    // Get the input
+    let input = parse_input(lines);
+
+    // Execute all of the folding instructions
+    let mut points = input.points;
+    for f in input.folds {
+        points = fold(&points, f);
+    }
+
+    // Print the results, so we can read the letters
+    print_point_grid(&points);
+    Ok(points.len() as Answer)
 }
 
 pub fn make_day_13() -> Day {
     Day::new(
         13,
         DayPart::new(day_13_a, 17, 592),
-        DayPart::new(day_13_b, 0, 0),
+        DayPart::new(day_13_b, 16, 94),
     )
 }
