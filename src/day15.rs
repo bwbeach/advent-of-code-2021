@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::grid::{parse_grid, Point};
+use crate::grid::{parse_grid, Grid, Point};
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-fn day_15_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn lowest_cost(cost_to_enter: &Grid) -> AdventResult<Answer> {
     // The input grid is the cost to enter each cell
-    let cost_to_enter = parse_grid(lines);
     let (width, height) = cost_to_enter.shape();
     let bottom_right = (width - 1, height - 1);
 
@@ -63,6 +62,12 @@ fn day_15_a(lines: &Vec<String>) -> AdventResult<Answer> {
         target_score += 1;
     }
     Ok(*done.get(&(0, 0)).unwrap() as Answer)
+}
+
+fn day_15_a(lines: &Vec<String>) -> AdventResult<Answer> {
+    // The input grid is the cost to enter each cell
+    let cost_to_enter = parse_grid(lines);
+    lowest_cost(&cost_to_enter)
 }
 
 fn day_15_b(_lines: &Vec<String>) -> AdventResult<Answer> {
