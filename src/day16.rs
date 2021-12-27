@@ -253,14 +253,70 @@ fn day_16_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(sum_versions(&parse_string(&lines[0])) as Answer)
 }
 
-fn day_16_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn evaluate(packet: &Packet) -> usize {
+    match &packet.contents {
+        Literal(n) => *n,
+        Operator(sub_packets) => {
+            let mut sub_values = sub_packets.iter().map(|p| evaluate(p));
+            match packet.type_id {
+                0 => sub_values.sum(),
+                1 => sub_values.product(),
+                2 => sub_values.min().unwrap(),
+                3 => sub_values.max().unwrap(),
+                5 => {
+                    let a = sub_values.next().unwrap();
+                    let b = sub_values.next().unwrap();
+                    if a > b {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                6 => {
+                    let a = sub_values.next().unwrap();
+                    let b = sub_values.next().unwrap();
+                    if a < b {
+                        1
+                    } else {
+                        0
+                    }
+                }
+                7 => {
+                    let a = sub_values.next().unwrap();
+                    let b = sub_values.next().unwrap();
+                    if a == b {
+                        1
+                    } else {
+                        0
+                    }
+                }
+
+                _ => panic!("unexpected type_id: {:?}", packet.type_id),
+            }
+        }
+    }
+}
+
+#[test]
+fn test_evaluate() {
+    assert_eq!(3, evaluate(&parse_string("C200B40A82")));
+    assert_eq!(54, evaluate(&parse_string("04005AC33890")));
+    assert_eq!(7, evaluate(&parse_string("880086C3E88112")));
+    assert_eq!(9, evaluate(&parse_string("CE00C43D881120")));
+    assert_eq!(1, evaluate(&parse_string("D8005AC2A8F0")));
+    assert_eq!(0, evaluate(&parse_string("F600BC2D8F")));
+    assert_eq!(0, evaluate(&parse_string("9C005AC2F8F0")));
+    assert_eq!(1, evaluate(&parse_string("9C0141080250320F1802104A08")));
+}
+
+fn day_16_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    Ok(evaluate(&parse_string(&lines[0])) as Answer)
 }
 
 pub fn make_day_16() -> Day {
     Day::new(
         16,
         DayPart::new(day_16_a, 31, 977),
-        DayPart::new(day_16_b, 0, 0),
+        DayPart::new(day_16_b, 54, 101501020883),
     )
 }
