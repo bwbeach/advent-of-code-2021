@@ -10,27 +10,27 @@ use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
 /// The left and right pairts of a pair are either pairs or
 /// regular numbers.
 #[derive(Clone, PartialEq)]
-enum SnailfishNumber {
-    Pair(SnailfishRc, SnailfishRc),
+enum SnailfishDetails {
+    Pair(SnailfishNumber, SnailfishNumber),
     Regular(u8),
 }
 
-use SnailfishNumber::{Pair, Regular};
+use SnailfishDetails::{Pair, Regular};
 
 #[derive(Clone, PartialEq)]
-struct SnailfishRc {
-    details: Rc<SnailfishNumber>,
+struct SnailfishNumber {
+    details: Rc<SnailfishDetails>,
 }
 
-impl SnailfishRc {
-    fn regular(n: u8) -> SnailfishRc {
-        SnailfishRc {
+impl SnailfishNumber {
+    fn regular(n: u8) -> SnailfishNumber {
+        SnailfishNumber {
             details: Rc::new(Regular(n)),
         }
     }
 
-    fn pair(left: &SnailfishRc, right: &SnailfishRc) -> SnailfishRc {
-        SnailfishRc {
+    fn pair(left: &SnailfishNumber, right: &SnailfishNumber) -> SnailfishNumber {
+        SnailfishNumber {
             details: Rc::new(Pair(left.clone(), right.clone())),
         }
     }
@@ -40,7 +40,7 @@ impl SnailfishRc {
     /// because all of the numbers are single digits.  For tests, though,
     /// we want to be able to parse non-reduced numbers, so we need to
     /// be able to peek ahead and see if there's more of the number.
-    fn parse<I>(iter: &mut iter::Peekable<I>) -> SnailfishRc
+    fn parse<I>(iter: &mut iter::Peekable<I>) -> SnailfishNumber
     where
         I: Iterator<Item = char>,
     {
@@ -60,54 +60,57 @@ impl SnailfishRc {
                 }
             }
 
-            SnailfishRc::regular(n)
+            SnailfishNumber::regular(n)
         } else if c == '[' {
-            let left = SnailfishRc::parse(iter);
+            let left = SnailfishNumber::parse(iter);
             if iter.next().unwrap() != ',' {
                 panic!("expected comma");
             }
-            let right = SnailfishRc::parse(iter);
-            SnailfishRc::pair(&left, &right)
+            let right = SnailfishNumber::parse(iter);
+            SnailfishNumber::pair(&left, &right)
         } else {
             panic!("bad number: {:?}", c);
         }
     }
 }
 
-impl FromStr for SnailfishRc {
+impl FromStr for SnailfishNumber {
     type Err = AdventError;
-    fn from_str(s: &str) -> Result<SnailfishRc, AdventError> {
+    fn from_str(s: &str) -> Result<SnailfishNumber, AdventError> {
         let mut iter = s.chars().peekable();
-        let result = SnailfishRc::parse(&mut iter);
+        let result = SnailfishNumber::parse(&mut iter);
         Ok(result)
     }
 }
 
 #[test]
 fn test_from_str() {
-    assert_eq!(SnailfishRc::regular(8), SnailfishRc::from_str("8").unwrap());
     assert_eq!(
-        SnailfishRc::regular(12),
-        SnailfishRc::from_str("12").unwrap()
+        SnailfishNumber::regular(8),
+        SnailfishNumber::from_str("8").unwrap()
     );
     assert_eq!(
-        SnailfishRc::pair(
-            &SnailfishRc::regular(1),
-            &SnailfishRc::pair(&SnailfishRc::regular(2), &SnailfishRc::regular(10))
+        SnailfishNumber::regular(12),
+        SnailfishNumber::from_str("12").unwrap()
+    );
+    assert_eq!(
+        SnailfishNumber::pair(
+            &SnailfishNumber::regular(1),
+            &SnailfishNumber::pair(&SnailfishNumber::regular(2), &SnailfishNumber::regular(10))
         ),
-        SnailfishRc::from_str("[1,[2,10]]").unwrap()
+        SnailfishNumber::from_str("[1,[2,10]]").unwrap()
     );
     // Check that equality goes inside the Rc
     assert_ne!(
-        SnailfishRc::pair(
-            &SnailfishRc::regular(1),
-            &SnailfishRc::pair(&SnailfishRc::regular(2), &SnailfishRc::regular(9))
+        SnailfishNumber::pair(
+            &SnailfishNumber::regular(1),
+            &SnailfishNumber::pair(&SnailfishNumber::regular(2), &SnailfishNumber::regular(9))
         ),
-        SnailfishRc::from_str("[1,[2,10]]").unwrap()
+        SnailfishNumber::from_str("[1,[2,10]]").unwrap()
     );
 }
 
-impl fmt::Debug for SnailfishRc {
+impl fmt::Debug for SnailfishNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &*self.details {
             Pair(left, right) => {
