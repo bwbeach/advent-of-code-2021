@@ -131,49 +131,6 @@ impl fmt::Debug for SnailfishNumber {
     }
 }
 
-// enum PathElem {
-//     Left,
-//     Right,
-// }
-
-// enum Path {
-//     Null,
-//     Cons(PathElem, Box<Path>),
-// }
-
-// fn first_pair_at_depth(number: &SnailfishNumber, depth: usize) -> Option<Path> {
-//     match number {
-//         Regular(_) => None,
-//         Pair(pair) => {
-//             if depth == 0 {
-//                 Some(Path::Null)
-//             } else {
-//                 let (left, right) = &**pair;
-//                 if let Some(left_path) = first_pair_at_depth(left, depth - 1) {
-//                     Some(Path::Cons(PathElem::Left, Box::new(left_path)))
-//                 } else if let Some(right_path) = first_pair_at_depth(right, depth - 1) {
-//                     Some(Path::Cons(PathElem::Left, Box::new(right_path)))
-//                 } else {
-//                     None
-//                 }
-//             }
-//         }
-//     }
-// }
-
-// fn one_left(path: &Path) -> Option<Path> {
-//     match path {
-//         Path::Null => None,
-//         Path::Cons(first, rest) => {
-//             if let Some(rest_path) = one_left(&*rest) {
-//                 Some(Path::Cons(first, Box::new(rest_path)))
-//             } else {
-//                 None
-//             }
-//         }
-//     }
-// }
-
 fn get_regular(number: &SnailfishNumber) -> u8 {
     match number.details() {
         Regular(n) => *n,
