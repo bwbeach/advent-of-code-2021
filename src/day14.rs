@@ -92,11 +92,11 @@ fn parse_rule(line: &str) -> (Pair, char) {
 }
 
 /// Parses the entire input file
-fn parse_input(lines: &Vec<String>) -> Input {
+fn parse_input(lines: &[&str]) -> Input {
     let mut iter = lines.iter();
     let initial_string = iter.next().unwrap().clone();
     let initial_state = parse_state(&initial_string);
-    if iter.next().unwrap() != "" {
+    if *iter.next().unwrap() != "" {
         panic!("expected blank second line");
     }
     let rules = iter.map(|line| parse_rule(line)).collect();
@@ -140,7 +140,7 @@ fn test_one_step() {
     assert_eq!(parse_state("ABCD"), one_step(&parse_state("ABD"), &rules));
 }
 
-fn day_14(lines: &Vec<String>, step_count: usize) -> AdventResult<Answer> {
+fn day_14(lines: &[&str], step_count: usize) -> AdventResult<Answer> {
     let input = parse_input(lines);
     let mut current = input.initial_state.clone();
     for _ in 0..step_count {
@@ -162,11 +162,11 @@ fn day_14(lines: &Vec<String>, step_count: usize) -> AdventResult<Answer> {
     Ok(max_count - min_count)
 }
 
-fn day_14_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_14_a(lines: &[&str]) -> AdventResult<Answer> {
     day_14(lines, 10)
 }
 
-fn day_14_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_14_b(lines: &[&str]) -> AdventResult<Answer> {
     day_14(lines, 40)
 }
 

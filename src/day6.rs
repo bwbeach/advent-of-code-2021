@@ -6,7 +6,7 @@ type FishCount = u64;
 /// The state, holding the number of fish for each count-down value.
 type State = [FishCount; 9];
 
-fn parse_input(lines: &Vec<String>) -> State {
+fn parse_input(lines: &[&str]) -> State {
     if lines.len() != 1 {
         panic!("expected exactly one input line");
     }
@@ -33,7 +33,7 @@ fn next_state(state: &State) -> State {
     ]
 }
 
-fn run_n_days(lines: &Vec<String>, day_count: usize) -> AdventResult<Answer> {
+fn run_n_days(lines: &[&str], day_count: usize) -> AdventResult<Answer> {
     let mut state = parse_input(lines);
     for _ in 0..day_count {
         state = next_state(&state);
@@ -42,11 +42,11 @@ fn run_n_days(lines: &Vec<String>, day_count: usize) -> AdventResult<Answer> {
     Ok(sum)
 }
 
-fn day_6_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_6_a(lines: &[&str]) -> AdventResult<Answer> {
     run_n_days(lines, 80)
 }
 
-fn day_6_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_6_b(lines: &[&str]) -> AdventResult<Answer> {
     run_n_days(lines, 256)
 }
 

@@ -11,7 +11,7 @@ use crate::types::{AdventResult, Answer, Day, DayPart};
 /// of inputs, either answer (or anything in between them) will have the
 /// same total cost.  (Proof left to reader. :-) )
 ///
-fn day_7_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_7_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut positions: Vec<i32> = lines[0].split(",").map(|s| s.parse().unwrap()).collect();
     positions.sort();
     let median = positions[positions.len() / 2];
@@ -35,7 +35,7 @@ fn part_b_total_cost(positions: &Vec<i32>, chosen: i32) -> i32 {
 /// I don't know how to derive the answer mathematically, so we'll
 /// just try all the possibilities until we find the answer.
 ///
-fn day_7_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_7_b(lines: &[&str]) -> AdventResult<Answer> {
     let positions: Vec<i32> = lines[0].split(",").map(|s| s.parse().unwrap()).collect();
     let min: i32 = *(positions.iter().min().unwrap());
     let max: i32 = *(positions.iter().max().unwrap());

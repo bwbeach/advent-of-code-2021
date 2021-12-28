@@ -14,11 +14,7 @@ fn is_low_spot(grid: &Grid, pos: Point) -> bool {
 
 #[test]
 fn test_is_low_spot() {
-    let grid = parse_grid(&vec![
-        "123".to_string(),
-        "303".to_string(),
-        "321".to_string(),
-    ]);
+    let grid = parse_grid(&["123", "303", "321"]);
     for x in 0..3 {
         for y in 0..3 {
             assert_eq!(x == y, is_low_spot(&grid, (x, y)));
@@ -26,7 +22,7 @@ fn test_is_low_spot() {
     }
 }
 
-fn day_9_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_9_a(lines: &[&str]) -> AdventResult<Answer> {
     let grid = parse_grid(lines);
     let (columns, rows) = grid.shape();
     let mut score = 0;
@@ -65,11 +61,7 @@ fn find_basin(grid: &Grid, point: Point) -> Option<Point> {
 
 #[test]
 fn test_find_basin() {
-    let grid = parse_grid(&vec![
-        "123".to_string(),
-        "994".to_string(),
-        "129".to_string(),
-    ]);
+    let grid = parse_grid(&vec!["123", "994", "129"]);
     println!("{:?}", grid);
     assert_eq!(Some((0, 0)), find_basin(&grid, (0, 0)));
     assert_eq!(Some((0, 0)), find_basin(&grid, (1, 0)));
@@ -79,7 +71,7 @@ fn test_find_basin() {
     assert_eq!((None), find_basin(&grid, (1, 1)));
 }
 
-fn day_9_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_9_b(lines: &[&str]) -> AdventResult<Answer> {
     let grid = parse_grid(lines);
     let (width, height) = grid.shape();
     let mut basin_to_count: HashMap<Point, usize> = HashMap::new();

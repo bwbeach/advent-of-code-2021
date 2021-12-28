@@ -132,7 +132,7 @@ fn test_points_in_range() {
     );
 }
 
-fn day_5_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_5_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut point_to_count: HashMap<Point, u32> = HashMap::new();
     for line in lines.iter() {
         let point_range = PointRange::from_str(line)?;
@@ -146,7 +146,7 @@ fn day_5_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(count as u64)
 }
 
-fn day_5_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_5_b(lines: &[&str]) -> AdventResult<Answer> {
     let mut point_to_count: HashMap<Point, u32> = HashMap::new();
     for line in lines.iter() {
         let point_range = PointRange::from_str(line)?;

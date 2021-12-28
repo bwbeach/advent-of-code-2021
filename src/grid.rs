@@ -224,7 +224,7 @@ impl fmt::Debug for Grid {
     }
 }
 
-pub fn parse_grid(lines: &Vec<String>) -> Grid {
+pub fn parse_grid(lines: &[&str]) -> Grid {
     let value_vector: Vec<u8> = lines
         .iter()
         .map(|line| line.chars())
@@ -243,6 +243,6 @@ pub fn parse_grid(lines: &Vec<String>) -> Grid {
 
 #[test]
 fn test_parse_format_grid() {
-    let grid = parse_grid(&vec!["123".to_string(), "456".to_string()]);
+    let grid = parse_grid(&["123", "456"]);
     assert_eq!("1 2 3\n4 5 6\n", format!("{:?}", grid));
 }

@@ -249,7 +249,7 @@ fn test_sum_versions() {
     );
 }
 
-fn day_16_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_16_a(lines: &[&str]) -> AdventResult<Answer> {
     Ok(sum_versions(&parse_string(&lines[0])) as Answer)
 }
 
@@ -309,7 +309,7 @@ fn test_evaluate() {
     assert_eq!(1, evaluate(&parse_string("9C0141080250320F1802104A08")));
 }
 
-fn day_16_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_16_b(lines: &[&str]) -> AdventResult<Answer> {
     Ok(evaluate(&parse_string(&lines[0])) as Answer)
 }
 

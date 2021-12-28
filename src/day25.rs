@@ -1,10 +1,10 @@
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-fn day_25_a(_lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_25_a(_lines: &[&str]) -> AdventResult<Answer> {
     Ok(0)
 }
 
-fn day_25_b(_lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_25_b(_lines: &[&str]) -> AdventResult<Answer> {
     Ok(0)
 }
 

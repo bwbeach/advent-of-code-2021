@@ -308,11 +308,11 @@ fn test_parse_input() {
     );
 }
 
-fn day_19_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_19_a(lines: &[&str]) -> AdventResult<Answer> {
     Ok(0)
 }
 
-fn day_19_b(_lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_19_b(_lines: &[&str]) -> AdventResult<Answer> {
     Ok(0)
 }
 

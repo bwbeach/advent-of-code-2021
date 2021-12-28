@@ -64,13 +64,13 @@ fn lowest_cost(cost_to_enter: &Grid) -> AdventResult<Answer> {
     Ok(*done.get(&(0, 0)).unwrap() as Answer)
 }
 
-fn day_15_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_15_a(lines: &[&str]) -> AdventResult<Answer> {
     // The input grid is the cost to enter each cell
     let cost_to_enter = parse_grid(lines);
     lowest_cost(&cost_to_enter)
 }
 
-fn day_15_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_15_b(lines: &[&str]) -> AdventResult<Answer> {
     // The input grid is the cost to enter each cell
     let original = parse_grid(lines);
     let original_shape = original.shape();

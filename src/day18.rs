@@ -340,7 +340,7 @@ fn test_add() {
     )
 }
 
-fn day_18_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_18_a(lines: &[&str]) -> AdventResult<Answer> {
     let sum = lines
         .iter()
         .map(|line| SnailfishNumber::from_str(line).unwrap())
@@ -350,7 +350,7 @@ fn day_18_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(magnitude(&sum))
 }
 
-fn day_18_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_18_b(lines: &[&str]) -> AdventResult<Answer> {
     let numbers: Vec<_> = lines
         .iter()
         .map(|line| SnailfishNumber::from_str(line).unwrap())

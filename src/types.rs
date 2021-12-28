@@ -29,7 +29,7 @@ impl std::error::Error for AdventError {}
 pub type Answer = u64;
 
 /// Solutions know how to take the input lines for a problem and produce the answer.
-pub type Solver = fn(&Vec<String>) -> AdventResult<Answer>;
+pub type Solver = fn(&[&str]) -> AdventResult<Answer>;
 
 /// The implementation for each day contains a solution for part A and
 /// part B of the problem.
@@ -49,9 +49,11 @@ impl DayPart {
         }
     }
 
-    pub fn solve(&self, lines: &Vec<String>) -> AdventResult<Answer> {
+    pub fn solve(&self, lines: &[&str]) -> AdventResult<Answer> {
         let s = self.solver;
-        s(lines)
+        // convert the Vec<String> to a Vec<&str>
+        let line_refs: Vec<_> = lines.iter().map(|s| &s[..]).collect();
+        s(&line_refs[..])
     }
 }
 

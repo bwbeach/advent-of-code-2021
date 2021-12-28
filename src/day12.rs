@@ -41,7 +41,7 @@ impl<'a, 'b> Graph<'a> {
     }
 }
 
-fn parse_graph<'a>(lines: &'a Vec<String>) -> Graph<'a> {
+fn parse_graph<'a>(lines: &'a [&str]) -> Graph<'a> {
     let mut graph = Graph::empty();
     for line in lines {
         let parts: Vec<_> = line.split("-").collect();
@@ -55,7 +55,7 @@ fn parse_graph<'a>(lines: &'a Vec<String>) -> Graph<'a> {
 
 #[test]
 fn test_parse_graph() {
-    let lines = vec!["a-b".to_string(), "c-b".to_string()];
+    let lines = ["a-b", "c-b"];
     let graph = parse_graph(&lines);
 
     fn make_set<'a>(items: &[&'a str]) -> HashSet<&'a str> {
@@ -101,7 +101,7 @@ fn paths_to_end<'a, 'b>(
     }
 }
 
-fn day_12_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_12_a(lines: &[&str]) -> AdventResult<Answer> {
     let graph = parse_graph(lines);
     Ok(paths_to_end(
         &graph,
@@ -112,7 +112,7 @@ fn day_12_a(lines: &Vec<String>) -> AdventResult<Answer> {
     ))
 }
 
-fn day_12_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_12_b(lines: &[&str]) -> AdventResult<Answer> {
     let graph = parse_graph(lines);
     Ok(paths_to_end(
         &graph,

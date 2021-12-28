@@ -85,7 +85,7 @@ fn all_velocities(target: &Target) -> Vec<(i32, i32)> {
     result
 }
 
-fn day_17_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_17_a(lines: &[&str]) -> AdventResult<Answer> {
     let target = parse_target(&lines[0]);
     let all = all_velocities(&target);
     let max_vy = all.iter().map(|(_, vy)| vy).max().unwrap();
@@ -93,7 +93,7 @@ fn day_17_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(max_y as Answer)
 }
 
-fn day_17_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_17_b(lines: &[&str]) -> AdventResult<Answer> {
     let target = parse_target(&lines[0]);
     let all = all_velocities(&target);
     Ok(all.len() as Answer)

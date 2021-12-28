@@ -84,10 +84,10 @@ struct Input {
     folds: Vec<FoldInstruction>,
 }
 
-fn parse_input(lines: &Vec<String>) -> Input {
+fn parse_input(lines: &[&str]) -> Input {
     let iter = &mut lines.iter();
     let points: HashSet<_> = iter
-        .take_while(|&line| line != "")
+        .take_while(|&line| *line != "")
         .map(|line| parse_point(line))
         .collect();
     let folds: Vec<_> = iter
@@ -100,7 +100,7 @@ fn fold(points: &HashSet<Point>, f: FoldInstruction) -> HashSet<Point> {
     points.iter().map(|&p| fold_point(p, f)).collect()
 }
 
-fn day_13_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_13_a(lines: &[&str]) -> AdventResult<Answer> {
     let input = parse_input(lines);
     let points = fold(&input.points, input.folds[0]);
     Ok(points.len() as u64)
@@ -122,7 +122,7 @@ fn print_point_grid(points: &HashSet<Point>) {
     println!("--------");
 }
 
-fn day_13_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_13_b(lines: &[&str]) -> AdventResult<Answer> {
     // Get the input
     let input = parse_input(lines);
 

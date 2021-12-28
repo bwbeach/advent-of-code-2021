@@ -100,7 +100,7 @@ fn test_check_line() {
     );
 }
 
-fn day_10_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_10_a(lines: &[&str]) -> AdventResult<Answer> {
     let answer: Answer = lines
         .iter()
         .filter_map(|line| match check_line(line) {
@@ -111,7 +111,7 @@ fn day_10_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(answer)
 }
 
-fn day_10_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_10_b(lines: &[&str]) -> AdventResult<Answer> {
     let mut answers: Vec<Answer> = lines
         .iter()
         .filter_map(|line| match check_line(line) {

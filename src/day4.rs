@@ -1,54 +1,12 @@
 use std::collections::HashSet;
 
-use itertools::all;
+use itertools::{all, Itertools};
 use ndarray::{s, Array2}; // TODO: fix unused warning, and keep available for tests
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
 /// A number on a Day 4 bingo card
 type BingoCardNumber = u8;
-
-/// Finds the sequences of non-empty lines in a list of lines.
-///
-/// TODO: figure out how to use group_by, either the new experimental
-/// feature in std, or the one in the itertools package.
-fn group_lines(lines: &Vec<String>) -> Vec<Vec<String>> {
-    let mut result = Vec::new();
-    let mut current_group = Vec::new();
-    for line in lines {
-        if line.len() == 0 {
-            if current_group.len() != 0 {
-                result.push(current_group.clone());
-                current_group.clear();
-            }
-        } else {
-            current_group.push(line.clone());
-        }
-    }
-    if current_group.len() != 0 {
-        result.push(current_group.clone());
-    }
-    result
-}
-
-#[test]
-fn test_group_lines() {
-    assert_eq!(
-        vec![
-            vec!["a".to_string(), "b".to_string()],
-            vec!["c".to_string()]
-        ],
-        group_lines(&vec![
-            "".to_string(),
-            "a".to_string(),
-            "b".to_string(),
-            "".to_string(),
-            "".to_string(),
-            "c".to_string(),
-            "".to_string()
-        ])
-    )
-}
 
 /// Holds one bingo card and the numbers on it.
 ///
@@ -106,7 +64,7 @@ fn test_is_bingo() {
     assert_eq!(true, card.is_bingo(&make_set(&[1, 3])));
 }
 
-fn parse_bingo_card(lines: &Vec<String>) -> BingoCard {
+fn parse_bingo_card(lines: &[&str]) -> BingoCard {
     let size = lines.len();
     let mut grid = Array2::<BingoCardNumber>::zeros((size, size));
     for (y, line) in lines.iter().enumerate() {
@@ -124,7 +82,7 @@ fn test_parse_bingo_card() {
         BingoCard {
             grid: ndarray::arr2(&[[1, 2], [3, 4]])
         },
-        parse_bingo_card(&vec!("1 2".to_string(), " 3  4 ".to_string()))
+        parse_bingo_card(&["1 2", " 3  4 "])
     )
 }
 
@@ -138,12 +96,11 @@ struct Day4Input {
     cards: Vec<BingoCard>,
 }
 
-fn parse_day_4_input(lines: &Vec<String>) -> Day4Input {
+fn parse_day_4_input(lines: &[&str]) -> Day4Input {
     let called: Vec<BingoCardNumber> = lines[0].split(",").map(|s| s.parse().unwrap()).collect();
-    // TODO: use slice of &str
-    let remaining_lines = lines[1..].iter().map(|line| line.clone()).collect();
-    let cards: Vec<BingoCard> = group_lines(&remaining_lines)
-        .iter()
+    let cards: Vec<BingoCard> = lines[1..]
+        .split(|line| *line == "")
+        .filter(|lines| lines.len() != 0)
         .map(|g| parse_bingo_card(g))
         .collect();
     Day4Input { called, cards }
@@ -151,18 +108,6 @@ fn parse_day_4_input(lines: &Vec<String>) -> Day4Input {
 
 #[test]
 fn test_parse_day_4_input() {
-    let input: Vec<String> = r"13,15
-
-    1 2
-    3 4
-
-    5 6
-    7 8
-"
-    .split("\n")
-    .map(|s| s.to_string())
-    .collect();
-
     assert_eq!(
         Day4Input {
             called: vec![13, 15],
@@ -175,11 +120,11 @@ fn test_parse_day_4_input() {
                 }
             ]
         },
-        parse_day_4_input(&input)
+        parse_day_4_input(&["13,15", "", "1 2", "3 4", "", "5 6", "7 8"])
     )
 }
 
-fn day_4_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_4_a(lines: &[&str]) -> AdventResult<Answer> {
     let input = parse_day_4_input(lines);
     let mut picked_so_far = HashSet::<BingoCardNumber>::new();
     for &draw in input.called.iter() {
@@ -193,7 +138,7 @@ fn day_4_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(0)
 }
 
-fn day_4_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_4_b(lines: &[&str]) -> AdventResult<Answer> {
     let input = parse_day_4_input(lines);
     let mut picked_so_far = HashSet::<BingoCardNumber>::new();
     // all of the cards that have won so far

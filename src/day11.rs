@@ -20,19 +20,9 @@ fn increment_one(grid: &mut Grid, pos: Point) -> Answer {
 
 #[test]
 fn test_increment_one() {
-    let mut grid = parse_grid(&vec![
-        "111".to_string(),
-        "199".to_string(),
-        "191".to_string(),
-        "111".to_string(),
-    ]);
+    let mut grid = parse_grid(&["111", "199", "191", "111"]);
     assert_eq!(3, increment_one(&mut grid, (1, 1)));
-    let mut expected = parse_grid(&vec![
-        "233".to_string(),
-        "300".to_string(),
-        "304".to_string(),
-        "222".to_string(),
-    ]);
+    let mut expected = parse_grid(&["233", "300", "304", "222"]);
     expected.set((1, 1), 12);
     expected.set((2, 1), 11);
     expected.set((1, 2), 11);
@@ -61,25 +51,13 @@ fn one_step(grid: &mut Grid) -> Answer {
 
 #[test]
 fn test_one_step() {
-    let mut grid = parse_grid(&vec![
-        "11111".to_string(),
-        "19991".to_string(),
-        "19191".to_string(),
-        "19991".to_string(),
-        "11111".to_string(),
-    ]);
+    let mut grid = parse_grid(&vec!["11111", "19991", "19191", "19991", "11111"]);
     assert_eq!(9, one_step(&mut grid));
-    let expected = parse_grid(&vec![
-        "34543".to_string(),
-        "40004".to_string(),
-        "50005".to_string(),
-        "40004".to_string(),
-        "34543".to_string(),
-    ]);
+    let expected = parse_grid(&vec!["34543", "40004", "50005", "40004", "34543"]);
     assert_eq!(expected, grid);
 }
 
-fn day_11_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_11_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut grid = parse_grid(lines);
     let mut flash_count = 0;
     for _ in 0..100 {
@@ -88,7 +66,7 @@ fn day_11_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(flash_count)
 }
 
-fn day_11_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_11_b(lines: &[&str]) -> AdventResult<Answer> {
     let mut grid = parse_grid(lines);
     let (width, height) = grid.shape();
     let octopus_count = (width * height) as Answer;

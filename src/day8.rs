@@ -217,7 +217,7 @@ fn test_solve_one_line() {
     }
 }
 
-fn day_8_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_8_a(lines: &[&str]) -> AdventResult<Answer> {
     let count: usize = lines
         .iter()
         .map(|line| InputLine::from_str(line).unwrap())
@@ -245,7 +245,7 @@ fn test_vector_to_number() {
     assert_eq!(1234, vector_to_number(&vec![1, 2, 3, 4]));
 }
 
-fn day_8_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_8_b(lines: &[&str]) -> AdventResult<Answer> {
     let total: u64 = lines
         .iter()
         .map(|line| InputLine::from_str(line).unwrap())

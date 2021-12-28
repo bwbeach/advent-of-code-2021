@@ -41,7 +41,8 @@ fn run_once(
 ) -> AdventResult<Answer> {
     let path = format!("{}/{}", input_dir, file_name);
     let lines = lines_in_file(Path::new(&path))?;
-    let answer = day_part.solve(&lines)?;
+    let line_strs: Vec<&str> = lines.iter().map(|s| &s[..]).collect();
+    let answer = day_part.solve(&line_strs)?;
     println!("{} -> {}", path, answer);
     if answer != expected {
         panic!("MISMATCH");

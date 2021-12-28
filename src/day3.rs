@@ -1,6 +1,6 @@
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-fn day_3_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_3_a(lines: &[&str]) -> AdventResult<Answer> {
     let number_of_bits = lines[0].len();
     let numbers: Vec<u64> = lines
         .iter()
@@ -24,7 +24,7 @@ fn day_3_a(lines: &Vec<String>) -> AdventResult<Answer> {
 /// represented as strings of '0' and '1'.
 ///
 /// TODO: switch from String to &str
-fn most_common_bit_in_column(numbers: &Vec<String>, index: usize) -> char {
+fn most_common_bit_in_column(numbers: &[&str], index: usize) -> char {
     let number_of_ones = numbers
         .iter()
         .filter(|s| s.as_bytes()[index] == '1' as u8)
@@ -38,34 +38,29 @@ fn most_common_bit_in_column(numbers: &Vec<String>, index: usize) -> char {
 
 #[test]
 fn test_most_common_bit_in_column() {
-    let data = vec![
-        "0001".to_string(),
-        "0011".to_string(),
-        "0111".to_string(),
-        "1111".to_string(),
-    ];
+    let data = ["0001", "0011", "0111", "1111"];
     assert_eq!('0', most_common_bit_in_column(&data, 0));
     assert_eq!('1', most_common_bit_in_column(&data, 1));
     assert_eq!('1', most_common_bit_in_column(&data, 2));
     assert_eq!('1', most_common_bit_in_column(&data, 3));
 }
 
-fn day_3_b_helper(lines: &Vec<String>, index: usize, keep_common: bool) -> String {
+fn day_3_b_helper(lines: &[&str], index: usize, keep_common: bool) -> String {
     if lines.len() == 0 {
         panic!("no lines in input");
     } else if lines.len() == 1 {
-        lines[0].clone()
+        lines[0].to_string()
     } else {
         let most_common = most_common_bit_in_column(lines, index);
-        let matching = lines
+        let matching: Vec<&str> = lines
             .iter()
             .filter(|s| (s.as_bytes()[index] == most_common as u8) == keep_common)
-            .map(|s| s.clone())
+            .map(|&s| s)
             .collect();
         day_3_b_helper(&matching, index + 1, keep_common)
     }
 }
-fn day_3_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_3_b(lines: &[&str]) -> AdventResult<Answer> {
     let oxygen_line = day_3_b_helper(lines, 0, true);
     let oxygen = u64::from_str_radix(&oxygen_line, 2).unwrap();
     let co2_line = day_3_b_helper(lines, 0, false);

@@ -59,7 +59,7 @@ fn test_submarine_command() {
 
 // TODO: unit tests for parsing
 
-fn day_2_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_2_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut distance = 0;
     let mut depth = 0;
     for line in lines {
@@ -73,7 +73,7 @@ fn day_2_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(distance * depth)
 }
 
-fn day_2_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_2_b(lines: &[&str]) -> AdventResult<Answer> {
     let mut distance = 0;
     let mut depth = 0;
     let mut aim = 0;

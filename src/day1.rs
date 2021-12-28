@@ -1,7 +1,7 @@
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
 /// Takes a vector of strings and converts them to u64
-fn lines_to_numbers(lines: &Vec<String>) -> AdventResult<Vec<u64>> {
+fn lines_to_numbers(lines: &[&str]) -> AdventResult<Vec<u64>> {
     let result: Result<Vec<u64>, std::num::ParseIntError> =
         lines.iter().map(|s| s.parse()).collect();
     Ok(result?)
@@ -9,14 +9,11 @@ fn lines_to_numbers(lines: &Vec<String>) -> AdventResult<Vec<u64>> {
 
 #[test]
 fn test_lines_to_numbers() {
-    assert_eq!(
-        vec![1, 456],
-        lines_to_numbers(&vec!["1".to_string(), "456".to_string()]).unwrap()
-    );
+    assert_eq!(vec![1, 456], lines_to_numbers(&["1", "456"]).unwrap());
 }
 
 /// 1a: Counts lines containin numbers bigger than the line before
-fn day_1_a(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_1_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut prev: Option<u64> = None;
     let mut count: u64 = 0;
     for value in lines_to_numbers(&lines)? {
@@ -33,7 +30,7 @@ fn day_1_a(lines: &Vec<String>) -> AdventResult<Answer> {
 }
 
 /// 1b: Counts groups of three lines containin numbers bigger than the line before
-fn day_1_b(lines: &Vec<String>) -> AdventResult<Answer> {
+fn day_1_b(lines: &[&str]) -> AdventResult<Answer> {
     let mut a;
     let mut b: u64 = 0;
     let mut c: u64 = 0;
