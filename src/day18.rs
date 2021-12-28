@@ -1,5 +1,6 @@
 use std::fmt;
 use std::iter;
+use std::rc::Rc;
 use std::str::FromStr;
 
 use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
@@ -10,7 +11,7 @@ use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
 /// regular numbers.
 #[derive(Clone, PartialEq)]
 enum SnailfishNumber {
-    Pair(Box<(SnailfishNumber, SnailfishNumber)>),
+    Pair(Rc<SnailfishNumber>, Rc<SnailfishNumber>),
     Regular(u8),
 }
 
@@ -50,7 +51,7 @@ impl SnailfishNumber {
                 panic!("expected comma");
             }
             let right = SnailfishNumber::parse(iter);
-            Pair(Box::new((left, right)))
+            Pair(Rc::new(left), Rc::new(right))
         } else {
             panic!("bad number: {:?}", c);
         }
@@ -71,20 +72,26 @@ fn test_from_str() {
     assert_eq!(Regular(8), SnailfishNumber::from_str("8").unwrap());
     assert_eq!(Regular(12), SnailfishNumber::from_str("12").unwrap());
     assert_eq!(
-        Pair(Box::new((
-            Regular(1),
-            Pair(Box::new((Regular(2), Regular(10))))
-        ))),
+        Pair(
+            Rc::new(Regular(1)),
+            Rc::new(Pair(Rc::new(Regular(2)), Rc::new(Regular(10))))
+        ),
         SnailfishNumber::from_str("[1,[2,10]]").unwrap()
-    )
+    );
+    // Check that equality goes inside the Rc
+    assert_ne!(
+        Pair(
+            Rc::new(Regular(1)),
+            Rc::new(Pair(Rc::new(Regular(2)), Rc::new(Regular(9))))
+        ),
+        SnailfishNumber::from_str("[1,[2,10]]").unwrap()
+    );
 }
 
 impl fmt::Debug for SnailfishNumber {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Pair(b) => {
-                // TODO: what's the idiomatic way to do this?
-                let (left, right) = &**b;
+            Pair(left, right) => {
                 write!(f, "[{:?},{:?}]", left, right)
             }
             Regular(n) => write!(f, "{:?}", *n),
