@@ -275,7 +275,40 @@ fn test_all_rotations() {
     }
 }
 
-fn day_19_a(_lines: &Vec<String>) -> AdventResult<Answer> {
+/// Parse the locatons of the beacons from one scanner
+fn parse_beacons(lines: &[&str]) -> HashSet<Point> {
+    lines.iter().skip(1).map(|&s| parse_point(s)).collect()
+}
+
+/// Parse the input file, containing reports from all scanners
+fn parse_input(lines: &[&str]) -> Vec<HashSet<Point>> {
+    lines
+        .split(|line| *line == "")
+        .map(|sub_lines| parse_beacons(sub_lines))
+        .collect()
+}
+
+#[test]
+fn test_parse_input() {
+    let mut set1 = HashSet::new();
+    set1.insert(Point::new(1, 2, 3));
+    set1.insert(Point::new(4, 5, 6));
+    let mut set2 = HashSet::new();
+    set2.insert(Point::new(7, 8, 9));
+    assert_eq!(
+        vec![set1, set2],
+        parse_input(&[
+            "--- sensor 0 ---",
+            "1,2,3",
+            "4,5,6",
+            "",
+            "--- sensor 1 ---",
+            "7,8,9",
+        ])
+    );
+}
+
+fn day_19_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(0)
 }
 
