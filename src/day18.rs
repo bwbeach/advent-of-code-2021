@@ -11,20 +11,36 @@ use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
 /// regular numbers.
 #[derive(Clone, PartialEq)]
 enum SnailfishNumber {
-    Pair(Rc<SnailfishNumber>, Rc<SnailfishNumber>),
+    Pair(SnailfishRc, SnailfishRc),
     Regular(u8),
 }
 
 use SnailfishNumber::{Pair, Regular};
 
-impl SnailfishNumber {
+#[derive(Clone, PartialEq)]
+struct SnailfishRc {
+    details: Rc<SnailfishNumber>,
+}
+
+impl SnailfishRc {
+    fn regular(n: u8) -> SnailfishRc {
+        SnailfishRc {
+            details: Rc::new(Regular(n)),
+        }
+    }
+
+    fn pair(left: &SnailfishRc, right: &SnailfishRc) -> SnailfishRc {
+        SnailfishRc {
+            details: Rc::new(Pair(left.clone(), right.clone())),
+        }
+    }
     /// Parsing from an iterable over the input characters.
     ///
     /// For all reduced numbers, we could parse without peeking ahead
     /// because all of the numbers are single digits.  For tests, though,
     /// we want to be able to parse non-reduced numbers, so we need to
     /// be able to peek ahead and see if there's more of the number.
-    fn parse<I>(iter: &mut iter::Peekable<I>) -> SnailfishNumber
+    fn parse<I>(iter: &mut iter::Peekable<I>) -> SnailfishRc
     where
         I: Iterator<Item = char>,
     {
@@ -44,57 +60,60 @@ impl SnailfishNumber {
                 }
             }
 
-            Regular(n)
+            SnailfishRc::regular(n)
         } else if c == '[' {
-            let left = SnailfishNumber::parse(iter);
+            let left = SnailfishRc::parse(iter);
             if iter.next().unwrap() != ',' {
                 panic!("expected comma");
             }
-            let right = SnailfishNumber::parse(iter);
-            Pair(Rc::new(left), Rc::new(right))
+            let right = SnailfishRc::parse(iter);
+            SnailfishRc::pair(&left, &right)
         } else {
             panic!("bad number: {:?}", c);
         }
     }
 }
 
-impl FromStr for SnailfishNumber {
+impl FromStr for SnailfishRc {
     type Err = AdventError;
-    fn from_str(s: &str) -> Result<SnailfishNumber, AdventError> {
+    fn from_str(s: &str) -> Result<SnailfishRc, AdventError> {
         let mut iter = s.chars().peekable();
-        let result = SnailfishNumber::parse(&mut iter);
+        let result = SnailfishRc::parse(&mut iter);
         Ok(result)
     }
 }
 
 #[test]
 fn test_from_str() {
-    assert_eq!(Regular(8), SnailfishNumber::from_str("8").unwrap());
-    assert_eq!(Regular(12), SnailfishNumber::from_str("12").unwrap());
+    assert_eq!(SnailfishRc::regular(8), SnailfishRc::from_str("8").unwrap());
     assert_eq!(
-        Pair(
-            Rc::new(Regular(1)),
-            Rc::new(Pair(Rc::new(Regular(2)), Rc::new(Regular(10))))
+        SnailfishRc::regular(12),
+        SnailfishRc::from_str("12").unwrap()
+    );
+    assert_eq!(
+        SnailfishRc::pair(
+            &SnailfishRc::regular(1),
+            &SnailfishRc::pair(&SnailfishRc::regular(2), &SnailfishRc::regular(10))
         ),
-        SnailfishNumber::from_str("[1,[2,10]]").unwrap()
+        SnailfishRc::from_str("[1,[2,10]]").unwrap()
     );
     // Check that equality goes inside the Rc
     assert_ne!(
-        Pair(
-            Rc::new(Regular(1)),
-            Rc::new(Pair(Rc::new(Regular(2)), Rc::new(Regular(9))))
+        SnailfishRc::pair(
+            &SnailfishRc::regular(1),
+            &SnailfishRc::pair(&SnailfishRc::regular(2), &SnailfishRc::regular(9))
         ),
-        SnailfishNumber::from_str("[1,[2,10]]").unwrap()
+        SnailfishRc::from_str("[1,[2,10]]").unwrap()
     );
 }
 
-impl fmt::Debug for SnailfishNumber {
+impl fmt::Debug for SnailfishRc {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
+        match &*self.details {
             Pair(left, right) => {
                 write!(f, "[{:?},{:?}]", left, right)
             }
-            Regular(n) => write!(f, "{:?}", *n),
+            Regular(n) => write!(f, "{:?}", n),
         }
     }
 }
@@ -159,19 +178,27 @@ impl fmt::Debug for SnailfishNumber {
 //     }
 // }
 
+/// Walks down a given depth from the current number and explodes there.
+///
+/// Caller must ensure that there are no pairs at (depth + 1).
+///
+/// Returns the None of nothing to explode was found.  
+/// Returns Some((add_left, new_number, add_right)) if a number to explode was
+/// found.
+///
 // fn explode_helper(number: &SnailfishNumber, depth: usize) -> Option<(u8, SnailfishNumber, u8)> {
 //     match number {
 //         Regular(_) => None,
-//         Pair(pair) => {
-//             let (left, right) = &**pair;
+//         Pair(left, right) => {
 //             if depth == 0 {
+//                 // We're going to explode this one.
+//                 // Anything below this level should be a Regular number.
 //                 let n_left = get_regular(left);
 //                 let n_right = get_regular(right);
 //                 Some((n_left, Regular(0), n_right))
 //             } else {
-//                 let (left, right) = &**pair;
 //                 if let Some((add_left, new_left, add_right)) = explode_helper(left, depth - 1) {
-//                     let new_number = Pair(Box::new((new_left, add_to_leftmost(right, add_right))));
+//                     let new_number = Pair(new_left, add_to_leftmost(right, add_right))));
 //                     Some((add_left, new_number, new_number))
 //                 } else if let Some((add_left, new_right, add_right)) =
 //                     explode_helper(right, depth - 1)
