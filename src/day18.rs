@@ -1,9 +1,10 @@
+use std::cmp::max;
 use std::fmt;
 use std::iter;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use itertools::Itertools;
+use itertools::{iproduct, Itertools};
 
 use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
 
@@ -349,14 +350,23 @@ fn day_18_a(lines: &Vec<String>) -> AdventResult<Answer> {
     Ok(magnitude(&sum))
 }
 
-fn day_18_b(_lines: &Vec<String>) -> AdventResult<Answer> {
-    Ok(0)
+fn day_18_b(lines: &Vec<String>) -> AdventResult<Answer> {
+    let numbers: Vec<_> = lines
+        .iter()
+        .map(|line| SnailfishNumber::from_str(line).unwrap())
+        .collect();
+    let max_magnitude = iproduct!(&numbers, &numbers)
+        .filter(|(a, b)| a != b)
+        .map(|(a, b)| max(magnitude(&add(a, b)), magnitude(&add(b, a))))
+        .max()
+        .unwrap();
+    Ok(max_magnitude)
 }
 
 pub fn make_day_18() -> Day {
     Day::new(
         18,
         DayPart::new(day_18_a, 4140, 3494),
-        DayPart::new(day_18_b, 0, 0),
+        DayPart::new(day_18_b, 3993, 4712),
     )
 }
