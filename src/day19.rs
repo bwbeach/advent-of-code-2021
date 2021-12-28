@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::fmt;
+use std::ops;
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
@@ -21,6 +22,40 @@ impl std::fmt::Debug for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{:?},{:?},{:?}", self.x, self.y, self.z)
     }
+}
+
+impl ops::Add for Point {
+    type Output = Self;
+    fn add(self, rhs: Point) -> Self::Output {
+        Point {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
+impl ops::Sub for Point {
+    type Output = Self;
+    fn sub(self, rhs: Point) -> Self::Output {
+        Point {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+#[test]
+fn test_point_math() {
+    assert_eq!(
+        Point::new(9, 18, 36),
+        Point::new(1, 2, 4) + Point::new(8, 16, 32)
+    );
+    assert_eq!(
+        Point::new(1, 2, 4),
+        Point::new(9, 18, 36) - Point::new(8, 16, 32)
+    );
 }
 
 fn parse_point(s: &str) -> Point {
