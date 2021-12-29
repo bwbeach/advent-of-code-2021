@@ -2,6 +2,8 @@ use std::collections::HashSet;
 use std::fmt;
 use std::ops;
 
+use itertools::iproduct;
+
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
 /// A point in 3-D space, with integer coordinates
@@ -83,6 +85,10 @@ fn parse_point(s: &str) -> Point {
 #[test]
 fn test_parse_point() {
     assert_eq!(Point::new(1, -2, 3), parse_point("1,-2,3"));
+}
+
+fn manhattan_distance(a: &Point, b: &Point) -> i32 {
+    (a.x - b.x).abs() + (a.y - b.y).abs() + (a.z - b.z).abs()
 }
 
 /// A rotation of a point
@@ -373,24 +379,6 @@ fn pre_process_input(sets: &Vec<HashSet<Point>>) -> Vec<Vec<Vec<Point>>> {
     sets.iter().map(|set| all_rotations_of_set(set)).collect()
 }
 
-/// The transform that moves the data for a sensor into place.
-///
-/// Order of operations is always:
-///    (1) rotate
-///    (2) translate
-///
-#[derive(Clone, Copy, Debug)]
-struct SensorTransform {
-    rotation: Rotation,
-    translation: Point,
-}
-
-impl SensorTransform {
-    fn apply(self, p: Point) -> Point {
-        (self.rotation)(p) + self.translation
-    }
-}
-
 /// Given slices of two lists of sorted points, find the number that match
 /// after adding the given offset to the second one.
 fn count_matching_points(a: &[Point], b: &[Point], offset: Point) -> usize {
@@ -461,15 +449,11 @@ fn match_point_lists(a: &Vec<Point>, b: &Vec<Point>, count: usize) -> Option<Poi
 /// For the first sensor, we alredy know the orientation because
 /// the search starts with an unrotated sensor 0, and then matches
 /// things against that.
-fn find_match<'a, 'b>(
-    a_points: &'a Vec<Point>,
-    b_rotations: &'b Vec<Vec<Point>>,
-) -> Option<(Point, &'b Vec<Point>)> {
-    // We can skip the first 11 when finding a point to match on.
-    // If 12 points match, we can afford to miss the first 11
+fn find_match(a_points: &Vec<Point>, b_rotations: &Vec<Vec<Point>>) -> Option<(Point, Vec<Point>)> {
     for b_points in b_rotations {
         if let Some(offset) = match_point_lists(a_points, b_points, 12) {
-            return Some((offset, b_points));
+            let moved_b_points: Vec<_> = b_points.iter().map(|p| *p + offset).collect();
+            return Some((offset, moved_b_points));
         }
     }
     None
@@ -482,72 +466,134 @@ fn test_find_match() {
     let strs_in_file: Vec<&str> = lines_in_file.iter().map(|s| &s[..]).collect();
     let sets = pre_process_input(&parse_input(&strs_in_file[..]));
 
+    let (sensor_1_position, sensor_1_points) = find_match(&sets[0][0], &sets[1]).unwrap();
+    assert_eq!(Point::new(68, -1246, -43), sensor_1_position);
     assert_eq!(
-        Point::new(68, -1246, -43),
-        find_match(&sets[0][0], &sets[1]).unwrap().0
+        true,
+        sensor_1_points.contains(&Point::new(-618, -824, -621))
     );
+    assert_eq!(true, sensor_1_points.contains(&Point::new(404, -588, -901)));
+
     assert_eq!(true, find_match(&sets[0][0], &sets[4]).is_none());
-    assert_eq!(true, find_match(&sets[1][0], &sets[4]).is_some());
+
+    let (sensor_4_position, sensor_4_points) = find_match(&sensor_1_points, &sets[4]).unwrap();
+    assert_eq!(Point::new(-20, -1133, 1061), sensor_4_position);
+    assert_eq!(true, sensor_1_points.contains(&Point::new(459, -707, 401)));
+    assert_eq!(
+        true,
+        sensor_1_points.contains(&Point::new(-739, -1745, 668))
+    );
+
+    let (sensor_2_position, _) = find_match(&sensor_4_points, &sets[2]).unwrap();
+    assert_eq!(Point::new(1105, -1205, 1229), sensor_2_position);
+
+    let (sensor_3_position, _) = find_match(&sensor_1_points, &sets[3]).unwrap();
+    assert_eq!(Point::new(-92, -2380, -20), sensor_3_position);
 }
 
-fn day_19_a(lines: &[&str]) -> AdventResult<Answer> {
-    let sets = pre_process_input(&parse_input(lines));
-    let mut done = HashSet::new(); // indices of sets that are done
-    let mut all_probes_from_sensor_0 = HashSet::new();
-    let mut sorted_probes_from_sensor_0 = Vec::new();
-
-    // We want to know the position of every sensor in relation to
-    // sensor 0.  Initially, we only know where sensor 0 is.
-    done.insert(0);
-    for p in &sets[0][0] {
-        all_probes_from_sensor_0.insert(*p);
-        sorted_probes_from_sensor_0.push(*p);
-    }
-    sorted_probes_from_sensor_0.sort();
-
-    // We'll keep trying to match until they're all done.
-    // TODO: optimize to reduce time from 4 minutes: avoid re-comparisons, maybe parallelize
-    while (&done).len() < (&sets).len() {
-        let mut done_this_time = HashSet::new();
-        for (u, rotations_u) in sets.iter().enumerate() {
-            if !done.contains(&u) {
-                for &d in &done {
-                    let rotations_d = &sets[d];
-                    let points_d = &rotations_d[0]; // any rotation will do to check for a match
-                    if let Some(_) = find_match(points_d, rotations_u) {
-                        // Find the transform from sensor 0.
-                        // TODO: add ability to combine transforms directly
-                        let (offset, matched_points) =
-                            find_match(&sorted_probes_from_sensor_0, rotations_u).unwrap();
-                        println!("sensor {:?} matches sensor {:?}: {:?}", u, d, offset);
-                        for p in matched_points {
-                            let p_from_sensor_0 = *p + offset;
-                            if !all_probes_from_sensor_0.contains(&p_from_sensor_0) {
-                                all_probes_from_sensor_0.insert(p_from_sensor_0);
-                                sorted_probes_from_sensor_0.push(p_from_sensor_0);
-                            }
-                            sorted_probes_from_sensor_0.sort();
-                        }
-                        done_this_time.insert(u);
-                    }
+fn match_with_done(
+    done: &Vec<Option<(Point, Vec<Point>)>>,
+    to_check: &HashSet<usize>,
+    rotations_u: &Vec<Vec<Point>>,
+) -> Option<(usize, Point, Vec<Point>)> {
+    for (d, d_state) in done.iter().enumerate() {
+        if to_check.contains(&d) {
+            if let Some((_, points_d)) = d_state {
+                if let Some((offset_u, points_u)) = find_match(points_d, rotations_u) {
+                    return Some((d, offset_u, points_u.clone()));
                 }
             }
         }
-        for dtt in done_this_time {
-            done.insert(dtt);
-        }
     }
-    Ok(all_probes_from_sensor_0.len() as Answer)
+    None
 }
 
-fn day_19_b(_lines: &[&str]) -> AdventResult<Answer> {
-    Ok(0)
+fn find_all_matches(lines: &[&str]) -> Vec<(Point, Vec<Point>)> {
+    let sets = pre_process_input(&parse_input(lines));
+
+    // The 'done' vector is parallel to sets, and tracks which ones
+    // have been matched and located.  For each one that's done, we
+    // keep the offset to it (the sensor's position), and the matching
+    // points after they were rotated and translated.
+    let mut done: Vec<Option<(Point, Vec<Point>)>> = Vec::new();
+    for _ in 0..sets.len() {
+        done.push(None);
+    }
+    let mut done_count = 1;
+
+    // We want to know the position of every sensor in relation to
+    // sensor 0.  Initially, we only know where sensor 0 is.
+    done[0] = Some((Point::new(0, 0, 0), sets[0][0].clone()));
+
+    // For efficiency, we track which indices have just been added
+    // to done. These are the only ones we need to match against.
+    let mut to_check: HashSet<usize> = HashSet::new();
+    to_check.insert(0);
+
+    // We'll keep trying to match until they're all done.
+    // TODO: optimize to reduce time from 4 minutes: avoid re-comparisons, maybe parallelize
+    while done_count < sets.len() {
+        let mut new_to_check = HashSet::new();
+        for (u, rotations_u) in sets.iter().enumerate() {
+            if done[u].is_none() {
+                if let Some((d, offset_u, points_u)) =
+                    match_with_done(&done, &to_check, rotations_u)
+                {
+                    println!("    Sensor {:?} is at {:?} matches {:?}", u, offset_u, d);
+                    done[u] = Some((offset_u, points_u.clone()));
+                    done_count += 1;
+                    new_to_check.insert(u);
+                }
+            }
+        }
+        if new_to_check.len() == 0 {
+            panic!("no progress");
+        }
+        to_check = new_to_check;
+    }
+
+    done.into_iter().map(|item| item.unwrap()).collect()
+}
+
+#[test]
+fn test_find_all_matches() {
+    let lines_in_file =
+        crate::util::lines_in_file(std::path::Path::new("input/day-19/sample.txt")).unwrap();
+    let strs_in_file: Vec<&str> = lines_in_file.iter().map(|s| &s[..]).collect();
+    let answers = find_all_matches(&strs_in_file);
+    assert_eq!(Point::new(0, 0, 0), answers[0].0);
+    assert_eq!(Point::new(68, -1246, -43), answers[1].0);
+    assert_eq!(Point::new(1105, -1205, 1229), answers[2].0);
+    assert_eq!(Point::new(-92, -2380, -20), answers[3].0);
+    assert_eq!(Point::new(-20, -1133, 1061), answers[4].0);
+}
+
+fn day_19_a(lines: &[&str]) -> AdventResult<Answer> {
+    let all_probes: HashSet<_> = find_all_matches(lines)
+        .iter()
+        .map(|(_, points)| points)
+        .flatten()
+        .map(|&p| p)
+        .collect();
+    Ok(all_probes.len() as Answer)
+}
+
+fn day_19_b(lines: &[&str]) -> AdventResult<Answer> {
+    let all_locations: Vec<_> = find_all_matches(lines)
+        .iter()
+        .map(|(location, _)| *location)
+        .collect();
+    let max_distance = iproduct!(&all_locations, &all_locations)
+        .map(|(a, b)| manhattan_distance(a, b))
+        .max()
+        .unwrap();
+    Ok(max_distance as Answer)
 }
 
 pub fn make_day_19() -> Day {
     Day::new(
         19,
         DayPart::new(day_19_a, 79, 350),
-        DayPart::new(day_19_b, 0, 0),
+        DayPart::new(day_19_b, 3621, 10895),
     )
 }
