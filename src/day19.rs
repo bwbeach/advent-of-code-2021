@@ -46,6 +46,17 @@ impl ops::Sub for Point {
     }
 }
 
+impl ops::Neg for Point {
+    type Output = Self;
+    fn neg(self) -> Self::Output {
+        Point {
+            x: -self.x,
+            y: -self.y,
+            z: -self.z,
+        }
+    }
+}
+
 #[test]
 fn test_point_math() {
     assert_eq!(
@@ -343,8 +354,103 @@ fn test_parse_input() {
     );
 }
 
+/// The transform that moves the data for a sensor into place.
+///
+/// Order of operations is always:
+///    (1) rotate
+///    (2) translate
+///
+#[derive(Clone, Copy, Debug)]
+struct SensorTransform {
+    rotation: Rotation,
+    translation: Point,
+}
+
+impl SensorTransform {
+    fn apply(self, p: Point) -> Point {
+        (self.rotation)(p) + self.translation
+    }
+}
+
+/// Given the output of two sensors, returns the transform for
+/// the second one to make it match the first one.
+fn find_match(a: &HashSet<Point>, b: &HashSet<Point>) -> Option<SensorTransform> {
+    // We can skip the first 11 when finding a point to match on.
+    // If 12 points match, we can afford to miss the first 11
+    for &a_start in a.iter().skip(11) {
+        for &b_start in b {
+            for rotation in ALL_ROTATIONS {
+                let transform = SensorTransform {
+                    rotation: rotation,
+                    translation: a_start - rotation(b_start),
+                };
+                let match_count = b
+                    .iter()
+                    .map(|&pb| (&transform).apply(pb))
+                    .filter(|pbr| a.contains(pbr))
+                    .count();
+                if 12 <= match_count {
+                    return Some(transform);
+                }
+            }
+        }
+    }
+    None
+}
+
+#[test]
+fn test_find_match() {
+    let lines_in_file =
+        crate::util::lines_in_file(std::path::Path::new("input/day-19/sample.txt")).unwrap();
+    let strs_in_file: Vec<&str> = lines_in_file.iter().map(|s| &s[..]).collect();
+    let sets = parse_input(&strs_in_file[..]);
+
+    assert_eq!(
+        Point::new(68, -1246, -43),
+        find_match(&sets[0], &sets[1]).unwrap().translation
+    );
+    assert_eq!(true, find_match(&sets[0], &sets[4]).is_none());
+    assert_eq!(true, find_match(&sets[1], &sets[4]).is_some());
+}
+
 fn day_19_a(lines: &[&str]) -> AdventResult<Answer> {
-    Ok(0)
+    let sets = parse_input(lines);
+    let mut done = HashSet::new(); // indices of sets that are done
+    let mut all_probes_from_sensor_0 = HashSet::new();
+
+    // We want to know the position of every sensor in relation to
+    // sensor 0.  Initially, we only know where sensor 0 is.
+    done.insert(0);
+    for p in &sets[0] {
+        all_probes_from_sensor_0.insert(*p);
+    }
+
+    // We'll keep trying to match until they're all done.
+    // TODO: optimize to reduce time from 4 minutes: avoid re-comparisons, maybe parallelize
+    while (&done).len() < (&sets).len() {
+        let mut done_this_time = HashSet::new();
+        for (u, set_u) in sets.iter().enumerate() {
+            if !done.contains(&u) {
+                for &d in &done {
+                    let set_d = &sets[d];
+                    if let Some(transform) = find_match(set_d, set_u) {
+                        println!("sensor {:?} matches sensor {:?}: {:?}", u, d, transform);
+                        // Find the transform from sensor 0.
+                        // TODO: add ability to combine transforms directly
+                        let full_transform = find_match(&all_probes_from_sensor_0, set_u).unwrap();
+                        for p in set_u {
+                            all_probes_from_sensor_0.insert(full_transform.apply(*p));
+                        }
+                        done_this_time.insert(u);
+                    }
+                }
+            }
+        }
+        for dtt in done_this_time {
+            done.insert(dtt);
+        }
+    }
+    Ok(all_probes_from_sensor_0.len() as Answer)
 }
 
 fn day_19_b(_lines: &[&str]) -> AdventResult<Answer> {
@@ -354,7 +460,7 @@ fn day_19_b(_lines: &[&str]) -> AdventResult<Answer> {
 pub fn make_day_19() -> Day {
     Day::new(
         19,
-        DayPart::new(day_19_a, 0, 0),
+        DayPart::new(day_19_a, 79, 350),
         DayPart::new(day_19_b, 0, 0),
     )
 }
