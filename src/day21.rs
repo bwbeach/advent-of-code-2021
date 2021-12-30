@@ -35,6 +35,10 @@ impl Die {
         self.count += 1;
         result
     }
+
+    fn roll3(&mut self) -> usize {
+        self.roll() + self.roll() + self.roll()
+    }
 }
 
 // Represents the current state of one player
@@ -60,9 +64,8 @@ impl Player {
         Player::start(pos)
     }
 
-    fn one_move(&mut self, die: &mut Die) -> usize {
-        let total_roll = die.roll() + die.roll() + die.roll();
-        self.position = wrap(self.position + total_roll, 1, 10);
+    fn one_move(&mut self, roll: usize) -> usize {
+        self.position = wrap(self.position + roll, 1, 10);
         self.score += self.position;
         self.score
     }
@@ -76,18 +79,15 @@ struct State {
 
     // the index of the player to play next
     next: usize,
-
-    // the die
-    die: Die,
 }
 
 impl State {
     // One player moves.  Returns the new score of that player
-    fn one_move(&mut self) -> usize {
+    fn one_move(&mut self, roll: usize) -> usize {
         let player_count = self.players.len();
         let player = &mut self.players[self.next];
         self.next = (self.next + 1) % player_count;
-        player.one_move(&mut self.die)
+        player.one_move(roll)
     }
 
     // The score that the loser had after somebody won.
@@ -102,17 +102,14 @@ fn parse_input(lines: &[&str]) -> State {
         .iter()
         .map(|&line| Player::from_input_line(line))
         .collect();
-    State {
-        players,
-        next: 0,
-        die: Die::new(),
-    }
+    State { players, next: 0 }
 }
 
 fn day_21_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut state = parse_input(lines);
-    while state.one_move() < 1000 {}
-    Ok((state.loser_score() * state.die.count) as Answer)
+    let mut die = Die::new();
+    while state.one_move(die.roll3()) < 1000 {}
+    Ok((state.loser_score() * die.count) as Answer)
 }
 
 fn day_21_b(_lines: &[&str]) -> AdventResult<Answer> {
