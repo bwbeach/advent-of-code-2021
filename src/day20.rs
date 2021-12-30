@@ -32,18 +32,15 @@ struct Neighbors {
 impl Iterator for Neighbors {
     type Item = Point;
     fn next(&mut self) -> Option<Point> {
-        self.i += 1;
-        match self.i {
-            1 => Some(Point::new(self.p.x - 1, self.p.y - 1)),
-            2 => Some(Point::new(self.p.x, self.p.y - 1)),
-            3 => Some(Point::new(self.p.x + 1, self.p.y - 1)),
-            4 => Some(Point::new(self.p.x - 1, self.p.y)),
-            5 => Some(Point::new(self.p.x, self.p.y)),
-            6 => Some(Point::new(self.p.x + 1, self.p.y)),
-            7 => Some(Point::new(self.p.x - 1, self.p.y + 1)),
-            8 => Some(Point::new(self.p.x, self.p.y + 1)),
-            9 => Some(Point::new(self.p.x + 1, self.p.y + 1)),
-            _ => None,
+        let index = self.i;
+        if index < 9 {
+            self.i += 1;
+            Some(Point::new(
+                self.p.x - 1 + ((index % 3) as i32),
+                self.p.y - 1 + ((index / 3) as i32),
+            ))
+        } else {
+            None
         }
     }
 }
@@ -260,7 +257,7 @@ fn day_20_b(_lines: &[&str]) -> AdventResult<Answer> {
 pub fn make_day_20() -> Day {
     Day::new(
         20,
-        DayPart::new(day_20_a, 35, 0), // not 5705
+        DayPart::new(day_20_a, 35, 5663),
         DayPart::new(day_20_b, 0, 0),
     )
 }
