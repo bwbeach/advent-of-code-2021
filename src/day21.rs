@@ -75,18 +75,17 @@ impl Player {
 #[derive(Debug)]
 struct State {
     // the players
-    players: Vec<Player>,
+    players: [Player; 2],
 
-    // the index of the player to play next
+    // the index of the player to play next: 0 or 1
     next: usize,
 }
 
 impl State {
     // One player moves.  Returns the new score of that player
     fn one_move(&mut self, roll: usize) -> usize {
-        let player_count = self.players.len();
         let player = &mut self.players[self.next];
-        self.next = (self.next + 1) % player_count;
+        self.next = 1 - self.next;
         player.one_move(roll)
     }
 
@@ -98,10 +97,10 @@ impl State {
 
 fn parse_input(lines: &[&str]) -> State {
     let mut iter = lines.iter();
-    let players = lines
-        .iter()
-        .map(|&line| Player::from_input_line(line))
-        .collect();
+    let players = [
+        Player::from_input_line(iter.next().unwrap()),
+        Player::from_input_line(iter.next().unwrap()),
+    ];
     State { players, next: 0 }
 }
 
