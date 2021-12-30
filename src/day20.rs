@@ -1,8 +1,4 @@
 use std::collections::HashSet;
-use std::fmt;
-use std::ops::RangeInclusive;
-
-use itertools::{iproduct, Itertools};
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
@@ -126,22 +122,22 @@ impl Image {
     }
 }
 
-fn print_image(image: &Image) {
-    let (min_x, max_x, min_y, max_y) = image.bounds();
+// fn print_image(image: &Image) {
+//     let (min_x, max_x, min_y, max_y) = image.bounds();
 
-    for y in min_y..=max_y {
-        for x in min_x..=max_x {
-            let pixel = if image.get(&Point::new(x, y)) == 1 {
-                '#'
-            } else {
-                '.'
-            };
-            print!("{}", pixel);
-        }
-        println!("");
-    }
-    println!("");
-}
+//     for y in min_y..=max_y {
+//         for x in min_x..=max_x {
+//             let pixel = if image.get(&Point::new(x, y)) == 1 {
+//                 '#'
+//             } else {
+//                 '.'
+//             };
+//             print!("{}", pixel);
+//         }
+//         println!("");
+//     }
+//     println!("");
+// }
 
 struct Input {
     algorithm: Algorithm,
@@ -239,25 +235,27 @@ fn one_step(original: &Image, algorithm: &Algorithm) -> Image {
     new_image
 }
 
-fn day_20_a(lines: &[&str]) -> AdventResult<Answer> {
+fn run_n_times(lines: &[&str], n: usize) -> AdventResult<Answer> {
     let input = parse_input(lines);
     let mut current_image = input.image.clone();
-    print_image(&current_image);
-    for _ in 0..2 {
+    for _ in 0..n {
         current_image = one_step(&current_image, &input.algorithm);
-        print_image(&current_image);
     }
     Ok(current_image.pixel_on_count() as Answer)
 }
 
-fn day_20_b(_lines: &[&str]) -> AdventResult<Answer> {
-    Ok(0)
+fn day_20_a(lines: &[&str]) -> AdventResult<Answer> {
+    run_n_times(lines, 2)
+}
+
+fn day_20_b(lines: &[&str]) -> AdventResult<Answer> {
+    run_n_times(lines, 50)
 }
 
 pub fn make_day_20() -> Day {
     Day::new(
         20,
         DayPart::new(day_20_a, 35, 5663),
-        DayPart::new(day_20_b, 0, 0),
+        DayPart::new(day_20_b, 3351, 19638),
     )
 }
