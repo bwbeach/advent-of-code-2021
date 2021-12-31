@@ -67,10 +67,12 @@ impl Player {
         Player::start(pos)
     }
 
-    fn one_move(&mut self, roll: usize) -> usize {
-        self.position = wrap(self.position + roll, 1, 10);
-        self.score += self.position;
-        self.score
+    fn one_move(&self, roll: usize) -> Player {
+        let new_position = wrap(self.position + roll, 1, 10);
+        Player {
+            position: new_position,
+            score: self.score + new_position,
+        }
     }
 }
 
@@ -86,10 +88,18 @@ struct State {
 
 impl State {
     // One player moves.  Returns the new score of that player
-    fn one_move(&mut self, roll: usize) -> usize {
-        let player = &mut self.players[self.next];
-        self.next = 1 - self.next;
-        player.one_move(roll)
+    fn one_move(&self, roll: usize) -> State {
+        if self.next == 0 {
+            State {
+                players: [self.players[0].one_move(roll), self.players[1].clone()],
+                next: 1,
+            }
+        } else {
+            State {
+                players: [self.players[0].clone(), self.players[1].one_move(roll)],
+                next: 0,
+            }
+        }
     }
 
     // Is the game over?
@@ -113,9 +123,12 @@ fn parse_input(lines: &[&str]) -> State {
 }
 
 fn day_21_a(lines: &[&str]) -> AdventResult<Answer> {
+    let winning_score = 1000;
     let mut state = parse_input(lines);
     let mut die = Die::new();
-    while state.one_move(die.roll3()) < 1000 {}
+    while !state.game_over(winning_score) {
+        state = state.one_move(die.roll3());
+    }
     Ok((state.loser_score() * die.count) as Answer)
 }
 
@@ -137,13 +150,12 @@ fn day_21_b(lines: &[&str]) -> AdventResult<Answer> {
         for (state, universe_count) in state_to_universes {
             if !state.game_over(winning_score) {
                 for (roll, count) in roll_and_count {
-                    let mut new_state = state.clone();
-                    let new_score = new_state.one_move(roll);
-                    (*new_state_to_universes.entry(new_state).or_insert(0)) +=
-                        universe_count * count;
-                    if new_score < winning_score {
+                    let new_state = state.one_move(roll);
+                    if !new_state.game_over(winning_score) {
                         all_complete = false;
                     }
+                    (*new_state_to_universes.entry(new_state).or_insert(0)) +=
+                        universe_count * count;
                 }
             } else {
                 (*new_state_to_universes.entry(state).or_insert(0)) += universe_count;
