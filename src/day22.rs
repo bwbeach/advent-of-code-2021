@@ -143,34 +143,33 @@ fn test_part_a() {
 fn day_22_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut result: HashMap<Cube, i64> = HashMap::new();
     for line in lines {
-        println!("\nLINE: {:?}\n", line);
         let (is_on, cube_from_line) = parse_line(line);
         if let Some(cube_to_use) =
             intersect_cubes(cube_from_line, ((-50, 50), (-50, 50), (-50, 50)))
         {
             result = add_one_instruction((is_on, cube_to_use), &result);
-            println!("\nso far: {:?}", count_cubelets(&result));
-        } else {
-            println!("SKIP: {:?}\n", line);
         }
     }
-
-    let mut count: i64 = 0;
-    for (cube, coefficient) in result {
-        count += coefficient * cube_size(cube);
-    }
-
-    Ok(count as Answer)
+    Ok(count_cubelets(&result) as Answer)
 }
 
-fn day_22_b(_lines: &[&str]) -> AdventResult<Answer> {
-    Ok(0)
+fn day_22_b(lines: &[&str]) -> AdventResult<Answer> {
+    let mut result: HashMap<Cube, i64> = HashMap::new();
+    for line in lines {
+        let instruction = parse_line(line);
+        result = add_one_instruction(instruction, &result);
+    }
+
+    println!("length: {:?}", result.len());
+    Ok(count_cubelets(&result) as Answer)
 }
 
 pub fn make_day_22() -> Day {
     Day::new(
         22,
         DayPart::new(day_22_a, 590784, 564654),
-        DayPart::new(day_22_b, 0, 0),
+        // NOTE: the first number is the answer for the sample from the first part.
+        // I have not run the sample from the second part.
+        DayPart::new(day_22_b, 39769202357779, 1214193181891104),
     )
 }
