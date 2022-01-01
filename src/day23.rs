@@ -3,12 +3,6 @@
 //
 // First, a couple observations...
 //
-// Every amphipod that is not in the right room, or is blocking
-// another from leaving, must move into the hallway, and then
-// move back.  The cost of moving to the hallway and then into
-// place is constant, and we don't need to worry about it when
-// searching for the minimum cost.
-//
 // If it's possible for an amphipod in the hallway to move into
 // its correct room, there's no reason not to do so immediately.
 // And, if there are multiple that can, the ordering doesn't
@@ -20,328 +14,227 @@
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-/// Types are Amber ('A'), Bronze ('B'), Copper ('C'), and Desert ('D')
-type AmphipodType = char;
+use ndarray::{Array2, ArrayBase};
 
-/// Names a position in the hallway.  The first position is always 0, and then
-/// they count up from there.
-type HallwayPosition = usize;
+type State = Array2<u8>;
+type Point = (usize, usize);
 
-fn cost_of_moving(amphipod_type: AmphipodType) -> usize {
+fn cost_of_moving(amphipod_type: u8) -> usize {
     match amphipod_type {
-        'A' => 1,
-        'B' => 10,
-        'C' => 100,
-        'D' => 1000,
+        b'A' => 1,
+        b'B' => 10,
+        b'C' => 100,
+        b'D' => 1000,
         _ => panic!("unknown amphipod type: {:?}", amphipod_type),
     }
 }
 
-fn is_amphipod_type(amphipod_type: AmphipodType) -> bool {
-    'A' <= amphipod_type && amphipod_type <= 'D'
-}
-
-/// The state of one room.
-#[derive(Debug)]
-struct Room {
-    // Which type of amphipod belongs in this room?
-    whose_room: AmphipodType,
-
-    // What type is in the spot nearest the hallway
-    near_seat: Option<AmphipodType>,
-
-    // What type is in the spot farther from the hallway
-    far_seat: Option<AmphipodType>,
-
-    // What position in the hallway does this room connect to?
-    hallway_position: HallwayPosition,
-}
-
-impl Room {
-    /// Returns the fixed cost of moving amphipods that don't
-    /// belong in this room out to the nearest hallway location,
-    /// and then moving the ones that belong here in from the
-    /// nearest hallway location.
-    ///
-    /// Caller is responsible for making sure that the room is
-    /// in the initial state, and fully occupied.
-    ///
-    fn fixed_cost(&self) -> usize {
-        let owner = self.whose_room;
-        let far_seat = self.far_seat.unwrap();
-        let near_seat = self.near_seat.unwrap();
-        if far_seat == owner {
-            if near_seat == owner {
-                0
-            } else {
-                cost_of_moving(near_seat) + cost_of_moving(owner)
-            }
-        } else {
-            // both will have to move out, and then both owners
-            // move in.
-            2 * cost_of_moving(far_seat) + cost_of_moving(near_seat) + 3 * cost_of_moving(owner)
-        }
-    }
-
-    /// Is there an amphipod in this room that needs to move out?
-    fn needs_move_out(&self) -> bool {
-        fn needs_move(whose_room: AmphipodType, seat: Option<AmphipodType>) -> bool {
-            seat.is_some() && seat.unwrap() != whose_room
-        }
-        needs_move(self.whose_room, self.near_seat) || needs_move(self.whose_room, self.far_seat)
-    }
-
-    /// Is this room in the desired state?
-    fn is_done(&self) -> bool {
-        self.far_seat == Some(self.whose_room) && self.near_seat == Some(self.whose_room)
-    }
-
-    /// Restore the state of this room
-    fn restore(&mut self, before: (Option<AmphipodType>, Option<AmphipodType>)) {
-        self.near_seat = before.0;
-        self.far_seat = before.1;
-    }
-}
-
-/// The state of the hallway
-#[derive(Debug)]
-struct Hallway {
-    /// What's at each position in the hallway?  These are
-    /// either '.' for empty, an AmphipodType, or 'X' for
-    /// not allowed.
-    contents: Vec<AmphipodType>,
-}
-
-impl Hallway {
-    fn len(&self) -> usize {
-        self.contents.len()
-    }
-    fn is_walkable_to(&self, from: usize, to_exclusive: usize) -> bool {
-        let range = if from < to_exclusive {
-            from..to_exclusive
-        } else {
-            (to_exclusive + 1)..(from - 1)
-        };
-        range.all(|i| {
-            let c = self.contents[i];
-            c == '.' || c == 'X'
-        })
-    }
-}
-
-// TODO: test_is_walkable_to
-
-#[derive(Debug)]
-struct State {
-    hallway: Hallway,
-    rooms: Vec<Room>,
-    fixed_cost: usize,
-}
-
-impl State {
-    fn new(rooms: Vec<Room>, hallway_length: usize) -> State {
-        println!("AAA {:?}", rooms);
-        let mut hallway_contents = vec!['.'; hallway_length];
-        for room in rooms.iter() {
-            hallway_contents[room.hallway_position] = 'X';
-        }
-        let fixed_cost = rooms.iter().map(|r| r.fixed_cost()).sum();
-        State {
-            hallway: Hallway {
-                contents: hallway_contents,
-            },
-            rooms: rooms,
-            fixed_cost,
-        }
-    }
-
-    /// Are all the rooms done?
-    fn is_done(&self) -> bool {
-        self.rooms.iter().all(|r| r.is_done())
-    }
-
-    /// Returns a reference to the room at the given position
-    /// in the hallway.
-    fn room_at<'a>(&'a self, pos: usize) -> Option<&'a Room> {
-        for room in self.rooms.iter() {
-            if room.hallway_position == pos {
-                return Some(room);
-            }
-        }
-        None
-    }
-
-    /// Prints the state in the same form as the input, with 'X'
-    /// in the hallway positions that are not legal to occupy.
-    fn print(&self) {
-        for _ in 0..(self.hallway.len() + 2) {
-            print!("#");
-        }
-        println!("");
-        print!("#");
-        for c in self.hallway.contents.iter() {
-            print!("{}", c);
-        }
-        println!("#");
-        print!("#");
-        for pos in 0..self.hallway.len() {
-            if let Some(room) = self.room_at(pos) {
-                if let Some(amphipod) = room.near_seat {
-                    print!("{}", amphipod);
-                } else {
-                    print!(".");
-                }
-            } else {
-                print!("#");
-            }
-        }
-        println!("#");
-        let min_room = self.rooms.iter().map(|r| r.hallway_position).min().unwrap();
-        let max_room = self.rooms.iter().map(|r| r.hallway_position).max().unwrap();
-        let fill_in = (min_room - 1)..=(max_room + 1);
-        print!(" ");
-        for pos in 0..self.hallway.len() {
-            if let Some(room) = self.room_at(pos) {
-                if let Some(amphipod) = room.far_seat {
-                    print!("{}", amphipod);
-                } else {
-                    print!(".");
-                }
-            } else {
-                if fill_in.contains(&pos) {
-                    print!("#");
-                } else {
-                    print!(" ");
-                }
-            }
-        }
-        println!("");
-        print!(" ");
-        for pos in 0..self.hallway.len() {
-            if fill_in.contains(&pos) {
-                print!("#");
-            } else {
-                print!(" ");
-            }
-        }
-        println!("");
-        println!("fixed cost = {:?}", self.fixed_cost);
-        println!("");
+fn is_amphipod(c: u8) -> bool {
+    match c {
+        b'A' => true,
+        b'B' => true,
+        b'C' => true,
+        b'D' => true,
+        _ => false,
     }
 }
 
 fn parse_state(lines: &[&str]) -> State {
-    let hallway_length = lines[1].len() - 2;
-    let mut rooms = Vec::new();
-    let mut next_type = 'A';
-    for (i, c) in lines[2].chars().enumerate() {
-        if is_amphipod_type(c) {
-            let room = Room {
-                whose_room: next_type,
-                near_seat: Some(c),
-                far_seat: lines[3].chars().skip(i).next(), // TODO: do better
-                hallway_position: i - 1,
-            };
-            rooms.push(room);
-            next_type = ((next_type as u8) + 1) as char;
+    let width = lines[0].as_bytes().len();
+    let height = lines.len();
+    let mut result = ArrayBase::zeros((width, height));
+    for (y, line) in lines.iter().enumerate() {
+        for (x, c) in line.as_bytes().iter().enumerate() {
+            result[(x, y)] = *c;
         }
     }
-    State::new(rooms, hallway_length)
+    result
 }
 
-/// Instructions for one move, and for undoing the move.
+fn print_state(state: &State) {
+    let shape = state.shape();
+    let width = shape[0];
+    let height = shape[1];
+    for y in 0..height {
+        for x in 0..width {
+            print!("{}", state[(x, y)] as char)
+        }
+        println!("");
+    }
+    println!("");
+}
+
+/// Are both amphipods in the room?
+fn is_room_done(state: &State, amphipod_type: u8, room_x: usize) -> bool {
+    state[(room_x, 2)] == amphipod_type && state[(room_x, 3)] == amphipod_type
+}
+/// Returns true iff all of the amphipods are in the right place
+fn is_done(state: &State, room_locations: &Vec<usize>) -> bool {
+    for (amphipod_type, room_x) in (b'A'..).zip(room_locations.iter()) {
+        if !is_room_done(state, amphipod_type, *room_x) {
+            return false;
+        }
+    }
+    true
+}
+
+/// Is the path between a home location and a hallway location clear?
+fn is_path_clear(
+    home_location: (usize, usize),
+    hall_location: (usize, usize),
+    state: &State,
+) -> bool {
+    let (home_x, home_y) = home_location;
+    let (hall_x, hall_y) = hall_location;
+    let vertical_clear = (1..home_y).all(|y| state[(home_x, y)] == b'.');
+    let mut hall_range = if hall_x < home_x {
+        (hall_x + 1)..home_x
+    } else {
+        (home_x + 1)..hall_x
+    };
+    let hall_clear = hall_range.all(|x| state[(x, 1)] == b'.');
+    vertical_clear && hall_clear
+}
+
+#[derive(Debug)]
 struct Move {
-    hallway_pos: usize,
-    hallway_before: AmphipodType,
-    hallway_after: AmphipodType,
-    room_index: usize,
-    room_before: (Option<AmphipodType>, Option<AmphipodType>),
-    room_after: (Option<AmphipodType>, Option<AmphipodType>),
+    src: Point,
+    dest: Point,
 }
 
 impl Move {
-    fn find_move_home(state: &State, room_index: usize, hallway_pos: usize) -> Option<Move> {
-        None
+    fn apply(&self, state: &mut State) {
+        state[self.dest] = state[self.src];
+        state[self.src] = b'.';
     }
 
-    fn find_move_out(state: &State, room_index: usize, hallway_pos: usize) -> Option<Move> {
-        let room = &state.rooms[room_index];
-        if state.hallway.contents[hallway_pos] != '.' {
-            None
-        } else if !state
-            .hallway
-            .is_walkable_to(room.hallway_position, hallway_pos)
-        {
-            None
-        } else if !room.needs_move_out() {
-            None
-        } else if let Some(a) = room.near_seat {
-            Some(Move {
-                hallway_pos,
-                hallway_before: '.',
-                hallway_after: a,
-                room_index,
-                room_before: (room.near_seat, room.far_seat),
-                room_after: (None, room.far_seat),
-            })
-        } else if let Some(a) = room.far_seat {
-            Some(Move {
-                hallway_pos,
-                hallway_before: '.',
-                hallway_after: a,
-                room_index,
-                room_before: (None, room.far_seat),
-                room_after: (None, None),
-            })
-        } else {
-            // TODO: moving-out cases
-            None
+    fn undo(&self, state: &mut State) {
+        state[self.src] = state[self.dest];
+        state[self.dest] = b'.';
+    }
+
+    fn score(&self, amphipod_type: u8) -> usize {
+        fn absdiff(a: usize, b: usize) -> usize {
+            (((a as i64) - (b as i64)).abs()) as usize
         }
-    }
-
-    fn cost(&self) -> usize {
-        0
+        let manhattan_distance =
+            absdiff(self.src.0, self.dest.0) + absdiff(self.src.1, self.dest.1);
+        cost_of_moving(amphipod_type) * manhattan_distance
     }
 }
 
-/// Finds the lowest score that gets to the final state
-fn search(state: &mut State) -> Option<usize> {
-    if state.is_done() {
-        Some(0)
+fn room_locations(state: &State) -> Vec<usize> {
+    let shape = state.shape();
+    let width = shape[0];
+    (0..width).filter(|x| state[(*x, 2)] != b'#').collect()
+}
+
+// There's a place to move home to if the room for this amphipod
+// type is either fully empty, or has the top seat empty and the
+// bottom seat already holds the right type.
+fn find_move_home_dest(state: &State, room_x: usize, amphipod_type: u8) -> Option<(usize, usize)> {
+    if state[(room_x, 2)] != b'.' {
+        None
+    } else if state[(room_x, 3)] == b'.' {
+        Some((room_x, 3))
+    } else if state[(room_x, 3)] == amphipod_type {
+        Some((room_x, 2))
     } else {
-        // First, look and see if there's an amphipod that can move home.
-        for room_index in 0..state.rooms.len() {
-            for hallway_pos in 0..state.hallway.len() {
-                if let Some(mov) = Move::find_move_home(state, room_index, hallway_pos) {
-                    mov.apply(state);
-                    let result = Some(mov.cost() + search(state));
-                    mov.undo(state);
-                    result
+        None
+    }
+}
+
+fn find_move_home(state: &State, room_locations: &Vec<usize>) -> Option<Move> {
+    let shape = state.shape();
+    let width = shape[0];
+    for x in 0..width {
+        let src = (x, 1);
+        let a = state[src];
+        if is_amphipod(a) {
+            let room_x = room_locations[(a - b'A') as usize];
+            if let Some(dest) = find_move_home_dest(state, room_x, a) {
+                if is_path_clear(dest, (x, 1), state) {
+                    return Some(Move { src, dest });
                 }
             }
         }
-        // Nobody could move home, try all the moves out to the hallway.
-        let mut best_score: Option<usize> = None;
-        for room in state.rooms.iter_mut() {
-            if let Some((who, before)) = room.move_out() {
-                for pos in 0..state.hallway.len() {
-                    let before = state.hallway.contents[pos];
-                    if before == '.' {
-                        state.hallway.contents[pos] = who;
+    }
+    None
+}
 
-                        state.hallway.contents[pos] = before;
+fn find_move_to_hall_src(state: &State, room_x: usize, amphipod_type: u8) -> Option<Point> {
+    if is_room_done(state, amphipod_type, room_x) {
+        None
+    } else {
+        let top = (room_x, 2);
+        let bottom = (room_x, 3);
+        if state[top] != b'.' {
+            Some(top)
+        } else if state[bottom] != b'.' && state[bottom] != amphipod_type {
+            Some(bottom)
+        } else {
+            None
+        }
+    }
+}
+
+fn find_move_to_hall_dest(state: &State, src: Point, hall_x: usize) -> Option<Point> {
+    let dest = (hall_x, 1);
+    if state[(dest)] != b'.' {
+        None
+    } else if is_path_clear(src, dest, state) {
+        Some(dest)
+    } else {
+        None
+    }
+}
+
+fn search_in_rooms(state: &mut State, room_locations: &Vec<usize>) -> Option<usize> {
+    let shape = state.shape();
+    let width = shape[0];
+    if is_done(state, &room_locations) {
+        Some(0)
+    } else if let Some(mov) = find_move_home(state, room_locations) {
+        let amphipod_type = state[mov.src];
+        mov.apply(state);
+        let score_of_rest = search_in_rooms(state, room_locations);
+        mov.undo(state);
+        score_of_rest.map(|s| s + mov.score(amphipod_type))
+    } else {
+        let mut best_score = None;
+        for (i, room_x) in room_locations.iter().enumerate() {
+            let room_amphipod_type = b'A' + (i as u8);
+            if let Some(src) = find_move_to_hall_src(state, *room_x, room_amphipod_type) {
+                for hall_x in 0..width {
+                    if !room_locations.contains(&hall_x) {
+                        if let Some(dest) = find_move_to_hall_dest(state, src, hall_x) {
+                            let mov = Move { src, dest };
+                            let moved = state[(src)];
+                            let move_score = mov.score(moved);
+                            mov.apply(state);
+                            if let Some(rest_of_score) = search_in_rooms(state, room_locations) {
+                                let this_score = move_score + rest_of_score;
+                                best_score = Some(
+                                    best_score.map_or(this_score, |s| std::cmp::min(s, this_score)),
+                                );
+                            }
+                            mov.undo(state);
+                        }
                     }
                 }
-                room.restore(before);
             }
         }
         best_score
     }
 }
 
+fn search(state: &mut State) -> Option<usize> {
+    let room_locations = room_locations(&state);
+    search_in_rooms(state, &room_locations)
+}
+
 #[test]
 fn test_search() {
-    // Starting from an already-done state should be 0
     assert_eq!(
         Some(0),
         search(&mut parse_state(&[
@@ -349,28 +242,70 @@ fn test_search() {
             "#...........#",
             "###A#B#C#D###",
             "  #A#B#C#D#",
-            "  #########"
+            "  #########",
         ]))
     );
 
-    // Starting from a place where one needs to be moved home.
-    // (answer does not include fixed cost)
     assert_eq!(
-        Some(7),
+        Some(8),
         search(&mut parse_state(&[
             "#############",
             "#.........A.#",
             "###.#B#C#D###",
             "  #A#B#C#D#",
-            "  #########"
+            "  #########",
+        ]))
+    );
+
+    assert_eq!(
+        Some(4008),
+        search(&mut parse_state(&[
+            "#############",
+            "#.....D...A.#",
+            "###.#B#C#.###",
+            "  #A#B#C#D#",
+            "  #########",
+        ]))
+    );
+
+    assert_eq!(
+        Some(7008),
+        search(&mut parse_state(&[
+            "#############",
+            "#.....D.D.A.#",
+            "###.#B#C#.###",
+            "  #A#B#C#.#",
+            "  #########",
+        ]))
+    );
+
+    assert_eq!(
+        Some(7011),
+        search(&mut parse_state(&[
+            "#############",
+            "#.....D.D...#",
+            "###.#B#C#.###",
+            "  #A#B#C#A#",
+            "  #########",
+        ]))
+    );
+
+    assert_eq!(
+        Some(9011),
+        search(&mut parse_state(&[
+            "#############",
+            "#.....D.....#",
+            "###.#B#C#D###",
+            "  #A#B#C#A#",
+            "  #########",
         ]))
     );
 }
 
 fn day_23_a(lines: &[&str]) -> AdventResult<Answer> {
-    let state = parse_state(lines);
-    state.print();
-    Ok(0)
+    let mut state = parse_state(lines);
+    print_state(&state);
+    Ok(search(&mut state).unwrap() as Answer)
 }
 
 fn day_23_b(_lines: &[&str]) -> AdventResult<Answer> {
@@ -380,7 +315,7 @@ fn day_23_b(_lines: &[&str]) -> AdventResult<Answer> {
 pub fn make_day_23() -> Day {
     Day::new(
         23,
-        DayPart::new(day_23_a, 0, 0),
+        DayPart::new(day_23_a, 12521, 17400),
         DayPart::new(day_23_b, 0, 0),
     )
 }
