@@ -1,5 +1,6 @@
 use std::cmp::{max, min};
 use std::fmt;
+use std::ops;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
@@ -48,6 +49,10 @@ struct InputName {
 }
 
 impl InputName {
+    fn all() -> Vec<InputName> {
+        ('a'..='n').map(|c| InputName::new(c)).collect()
+    }
+
     fn new(name: char) -> InputName {
         if name < 'a' || 'n' < name {
             panic!("bad input name: {}", name);
@@ -211,6 +216,80 @@ impl Instruction {
             )
         }
     }
+}
+
+// A linear polynomial of input values
+#[derive(Clone, Copy, Eq, PartialEq)]
+struct Polynomial {
+    // coefficients for each input, plus one more for a constant
+    coefficients: [i64; 15],
+}
+
+impl Polynomial {
+    fn constant(n: i64) -> Polynomial {
+        let mut coefficients = [0; 15];
+        coefficients[14] = n;
+        Polynomial { coefficients }
+    }
+
+    fn input(input_name: InputName) -> Polynomial {
+        let mut coefficients = [0; 15];
+        coefficients[input_name.index()] = 1;
+        Polynomial { coefficients }
+    }
+
+    fn times(&self, scalar: i64) -> Polynomial {
+        let mut coefficients = [0; 15];
+        for i in 0..15 {
+            coefficients[i] = self.coefficients[i] * scalar;
+        }
+        Polynomial { coefficients }
+    }
+}
+
+impl ops::Add for Polynomial {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        let mut coefficients = self.coefficients.clone();
+        for i in 0..15 {
+            coefficients[i] += other.coefficients[i];
+        }
+        Polynomial { coefficients }
+    }
+}
+
+impl fmt::Debug for Polynomial {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut first = true;
+        for (coefficient, input_name) in self.coefficients.iter().zip(InputName::all().iter()) {
+            if *coefficient != 0 {
+                if first {
+                    write!(f, " + ")?;
+                    first = false;
+                }
+                write!(f, "{:?}{:?}", coefficient, input_name)?;
+            }
+        }
+        let constant = self.coefficients[14];
+        if constant != 0 {
+            if first {
+                write!(f, " + ")?;
+                first = false;
+            }
+            write!(f, "{:?}", constant)?;
+        }
+        Ok(())
+    }
+}
+
+#[test]
+fn test_polynomial() {
+    let two = Polynomial::constant(2);
+    let five = Polynomial::constant(5);
+    let ten = Polynomial::constant(10);
+    let a = Polynomial::input(InputName::new('a'));
+    assert_eq!((a + two).times(5), a.times(5) + two.times(5))
 }
 
 #[derive(Clone, Eq, PartialEq)]
