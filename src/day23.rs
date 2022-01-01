@@ -350,14 +350,24 @@ fn day_23_a(lines: &[&str]) -> AdventResult<Answer> {
     Ok(search(&mut state).unwrap() as Answer)
 }
 
-fn day_23_b(_lines: &[&str]) -> AdventResult<Answer> {
-    Ok(0)
+fn day_23_b(lines: &[&str]) -> AdventResult<Answer> {
+    let mut updated_lines = Vec::new();
+    updated_lines.push(lines[0]);
+    updated_lines.push(lines[1]);
+    updated_lines.push(lines[2]);
+    updated_lines.push("  #D#C#B#A#");
+    updated_lines.push("  #D#B#A#C#");
+    updated_lines.push(lines[3]);
+    updated_lines.push(lines[4]);
+    let mut state = parse_state(&updated_lines[..]);
+    print_state(&state);
+    Ok(search(&mut state).unwrap() as Answer)
 }
 
 pub fn make_day_23() -> Day {
     Day::new(
         23,
         DayPart::new(day_23_a, 12521, 17400),
-        DayPart::new(day_23_b, 0, 0),
+        DayPart::new(day_23_b, 44169, 46120),
     )
 }
