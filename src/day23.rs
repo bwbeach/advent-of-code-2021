@@ -19,6 +19,24 @@ use ndarray::{Array2, ArrayBase};
 type State = Array2<u8>;
 type Point = (usize, usize);
 
+/// Information about the problem.
+///
+/// Extracted from the state once to avoid duplicate work.
+///
+struct Info {
+    // The width of the grid.
+    width: usize,
+
+    // The height of the grid.
+    height: usize,
+
+    // The x coordinate of each room
+    room_xs: Vec<usize>,
+
+    // The x coordinates of the places in the hall where amphipods can stop
+    hall_seat_xs: Vec<usize>,
+}
+
 fn cost_of_moving(amphipod_type: u8) -> usize {
     match amphipod_type {
         b'A' => 1,
@@ -68,6 +86,7 @@ fn print_state(state: &State) {
 fn is_room_done(state: &State, amphipod_type: u8, room_x: usize) -> bool {
     state[(room_x, 2)] == amphipod_type && state[(room_x, 3)] == amphipod_type
 }
+
 /// Returns true iff all of the amphipods are in the right place
 fn is_done(state: &State, room_locations: &Vec<usize>) -> bool {
     for (amphipod_type, room_x) in (b'A'..).zip(room_locations.iter()) {
@@ -123,37 +142,51 @@ impl Move {
     }
 }
 
-fn room_locations(state: &State) -> Vec<usize> {
+fn get_info(state: &State) -> Info {
     let shape = state.shape();
     let width = shape[0];
-    (0..width).filter(|x| state[(*x, 2)] != b'#').collect()
+    let height = shape[1];
+    let room_xs: Vec<_> = (0..width).filter(|x| state[(*x, 2)] != b'#').collect();
+    let hall_seat_xs = (0..width)
+        .filter(|x| state[(*x, 1)] != b'#')
+        .filter(|x| !room_xs.contains(x))
+        .collect();
+    Info {
+        width,
+        height,
+        room_xs,
+        hall_seat_xs,
+    }
 }
 
 // There's a place to move home to if the room for this amphipod
 // type is either fully empty, or has the top seat empty and the
 // bottom seat already holds the right type.
-fn find_move_home_dest(state: &State, room_x: usize, amphipod_type: u8) -> Option<(usize, usize)> {
-    if state[(room_x, 2)] != b'.' {
-        None
-    } else if state[(room_x, 3)] == b'.' {
-        Some((room_x, 3))
-    } else if state[(room_x, 3)] == amphipod_type {
-        Some((room_x, 2))
-    } else {
-        None
+fn find_move_home_dest(
+    state: &State,
+    room_x: usize,
+    amphipod_type: u8,
+    info: &Info,
+) -> Option<Point> {
+    for y in (1..(info.height - 1)).rev() {
+        let c = state[(room_x, y)];
+        if c == b'.' {
+            return Some((room_x, y));
+        } else if c != amphipod_type {
+            return None;
+        }
     }
+    panic!("should not happen");
 }
 
-fn find_move_home(state: &State, room_locations: &Vec<usize>) -> Option<Move> {
-    let shape = state.shape();
-    let width = shape[0];
-    for x in 0..width {
-        let src = (x, 1);
+fn find_move_home(state: &State, info: &Info) -> Option<Move> {
+    for x in info.hall_seat_xs.iter() {
+        let src = (*x, 1);
         let a = state[src];
         if is_amphipod(a) {
-            let room_x = room_locations[(a - b'A') as usize];
-            if let Some(dest) = find_move_home_dest(state, room_x, a) {
-                if is_path_clear(dest, (x, 1), state) {
+            let room_x = info.room_xs[(a - b'A') as usize];
+            if let Some(dest) = find_move_home_dest(state, room_x, a, info) {
+                if is_path_clear(dest, (*x, 1), state) {
                     return Some(Move { src, dest });
                 }
             }
@@ -189,37 +222,34 @@ fn find_move_to_hall_dest(state: &State, src: Point, hall_x: usize) -> Option<Po
     }
 }
 
-fn search_in_rooms(state: &mut State, room_locations: &Vec<usize>) -> Option<usize> {
-    let shape = state.shape();
-    let width = shape[0];
-    if is_done(state, &room_locations) {
+fn search_with_info(state: &mut State, info: &Info) -> Option<usize> {
+    let room_xs = &info.room_xs;
+    if is_done(state, &room_xs) {
         Some(0)
-    } else if let Some(mov) = find_move_home(state, room_locations) {
+    } else if let Some(mov) = find_move_home(state, info) {
         let amphipod_type = state[mov.src];
         mov.apply(state);
-        let score_of_rest = search_in_rooms(state, room_locations);
+        let score_of_rest = search_with_info(state, info);
         mov.undo(state);
         score_of_rest.map(|s| s + mov.score(amphipod_type))
     } else {
         let mut best_score = None;
-        for (i, room_x) in room_locations.iter().enumerate() {
+        for (i, room_x) in room_xs.iter().enumerate() {
             let room_amphipod_type = b'A' + (i as u8);
             if let Some(src) = find_move_to_hall_src(state, *room_x, room_amphipod_type) {
-                for hall_x in 0..width {
-                    if !room_locations.contains(&hall_x) {
-                        if let Some(dest) = find_move_to_hall_dest(state, src, hall_x) {
-                            let mov = Move { src, dest };
-                            let moved = state[(src)];
-                            let move_score = mov.score(moved);
-                            mov.apply(state);
-                            if let Some(rest_of_score) = search_in_rooms(state, room_locations) {
-                                let this_score = move_score + rest_of_score;
-                                best_score = Some(
-                                    best_score.map_or(this_score, |s| std::cmp::min(s, this_score)),
-                                );
-                            }
-                            mov.undo(state);
+                for hall_x in info.hall_seat_xs.iter() {
+                    if let Some(dest) = find_move_to_hall_dest(state, src, *hall_x) {
+                        let mov = Move { src, dest };
+                        let moved = state[(src)];
+                        let move_score = mov.score(moved);
+                        mov.apply(state);
+                        if let Some(rest_of_score) = search_with_info(state, info) {
+                            let this_score = move_score + rest_of_score;
+                            best_score = Some(
+                                best_score.map_or(this_score, |s| std::cmp::min(s, this_score)),
+                            );
                         }
+                        mov.undo(state);
                     }
                 }
             }
@@ -229,8 +259,8 @@ fn search_in_rooms(state: &mut State, room_locations: &Vec<usize>) -> Option<usi
 }
 
 fn search(state: &mut State) -> Option<usize> {
-    let room_locations = room_locations(&state);
-    search_in_rooms(state, &room_locations)
+    let info = get_info(&state);
+    search_with_info(state, &info)
 }
 
 #[test]
