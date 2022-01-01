@@ -82,9 +82,17 @@ fn print_state(state: &State) {
     println!("");
 }
 
-/// Are both amphipods in the room?
+/// Are all the right amphipods in the room?
 fn is_room_done(state: &State, amphipod_type: u8, room_x: usize, height: usize) -> bool {
     (2..(height - 1)).all(|y| state[(room_x, y)] == amphipod_type)
+}
+
+/// Are all the right amphipods in the room?
+fn is_room_partly_done(state: &State, amphipod_type: u8, room_x: usize, height: usize) -> bool {
+    (2..(height - 1)).all(|y| {
+        let c = state[(room_x, y)];
+        c == amphipod_type || c == b'.'
+    })
 }
 
 /// Returns true iff all of the amphipods are in the right place
@@ -201,18 +209,15 @@ fn find_move_to_hall_src(
     amphipod_type: u8,
     height: usize,
 ) -> Option<Point> {
-    if is_room_done(state, amphipod_type, room_x, height) {
+    if is_room_partly_done(state, amphipod_type, room_x, height) {
         None
     } else {
-        let top = (room_x, 2);
-        let bottom = (room_x, 3);
-        if state[top] != b'.' {
-            Some(top)
-        } else if state[bottom] != b'.' && state[bottom] != amphipod_type {
-            Some(bottom)
-        } else {
-            None
+        for y in 2..(height - 1) {
+            if state[(room_x, y)] != b'.' {
+                return Some((room_x, y));
+            }
         }
+        panic!("should not happen");
     }
 }
 
