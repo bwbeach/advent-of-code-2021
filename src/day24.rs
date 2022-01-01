@@ -1,4 +1,6 @@
+use std::cmp::{max, min};
 use std::fmt;
+use std::ops::RangeInclusive;
 use std::rc::Rc;
 
 use crate::types::{AdventResult, Answer, Day, DayPart};
@@ -228,6 +230,34 @@ impl fmt::Debug for Expr {
     }
 }
 
+/// Calculates the range of possible values of an expression
+fn get_range(expr: &Expr) -> RangeInclusive<i64> {
+    match expr {
+        Expr::Constant(n) => *n..=*n,
+        Expr::Input(_) => 1..=9,
+        Expr::Op(OpName, lhs_rc, rhs_rc) => {
+            let lhs_range = get_range(&**lhs_rc);
+            let rhs_range = get_range(&**rhs_rc);
+            match OpName {
+                Add => RangeInclusive::new(
+                    lhs_range.start() + rhs_range.start(),
+                    lhs_range.end() + rhs_range.end(),
+                ),
+                Mul => RangeInclusive::new(
+                    lhs_range.start() * rhs_range.start(),
+                    lhs_range.end() * rhs_range.end(),
+                ),
+                Div => RangeInclusive::new(
+                    lhs_range.start() / rhs_range.end(),
+                    lhs_range.end() / rhs_range.start(),
+                ),
+                Mod => RangeInclusive::new(0, *rhs_range.end()),
+                Eql => 0..=1,
+            }
+        }
+    }
+}
+
 fn simplify(expr: &Expr) -> Option<Expr> {
     if let Expr::Op(op_name, lhs_rc, rhs_rc) = expr {
         let lhs = &**lhs_rc;
@@ -284,19 +314,12 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 None
             }
             Eql => {
-                if let Expr::Constant(n) = lhs {
-                    if let Expr::Input(_) = rhs {
-                        if *n < 1 || 9 < *n {
-                            return Some(Expr::Constant(0));
-                        }
-                    }
-                }
-                if let Expr::Constant(n) = rhs {
-                    if let Expr::Input(_) = lhs {
-                        if *n < 1 || 9 < *n {
-                            return Some(Expr::Constant(0));
-                        }
-                    }
+                let lhs_range = get_range(lhs);
+                let rhs_range = get_range(rhs);
+                let ranges_overlap = max(lhs_range.start(), rhs_range.start())
+                    <= min(lhs_range.end(), rhs_range.end());
+                if !ranges_overlap {
+                    return Some(Expr::Constant(0));
                 }
                 None
             }
@@ -357,6 +380,12 @@ fn test_simplify() {
         get_w_expression(&[]),
         get_w_expression(&["inp w", "add x 14", "eql w x"])
     );
+
+    // When the ranges of two expressions don't overlap, they cannot be equal
+    assert_eq!(
+        get_w_expression(&[]),
+        get_w_expression(&["inp w", "mul w 100", "mod w 20", "add x 25", "eql w x"])
+    )
 }
 
 struct State {
@@ -428,7 +457,7 @@ impl State {
 fn print_state(state: &State) {
     // println!("next input: {:?}", state.next_input);
     for (r, expr) in RegisterName::all().into_iter().zip(state.registers.iter()) {
-        println!("{:?} = {:?}", r, *expr);
+        println!("{:?} = {:?}   {:?}", r, get_range(expr), *expr);
     }
     println!("");
 }
