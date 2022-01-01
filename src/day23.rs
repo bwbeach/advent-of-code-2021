@@ -83,14 +83,14 @@ fn print_state(state: &State) {
 }
 
 /// Are both amphipods in the room?
-fn is_room_done(state: &State, amphipod_type: u8, room_x: usize) -> bool {
-    state[(room_x, 2)] == amphipod_type && state[(room_x, 3)] == amphipod_type
+fn is_room_done(state: &State, amphipod_type: u8, room_x: usize, height: usize) -> bool {
+    (2..(height - 1)).all(|y| state[(room_x, y)] == amphipod_type)
 }
 
 /// Returns true iff all of the amphipods are in the right place
-fn is_done(state: &State, room_locations: &Vec<usize>) -> bool {
-    for (amphipod_type, room_x) in (b'A'..).zip(room_locations.iter()) {
-        if !is_room_done(state, amphipod_type, *room_x) {
+fn is_done(state: &State, info: &Info) -> bool {
+    for (amphipod_type, room_x) in (b'A'..).zip(info.room_xs.iter()) {
+        if !is_room_done(state, amphipod_type, *room_x, info.height) {
             return false;
         }
     }
@@ -195,8 +195,13 @@ fn find_move_home(state: &State, info: &Info) -> Option<Move> {
     None
 }
 
-fn find_move_to_hall_src(state: &State, room_x: usize, amphipod_type: u8) -> Option<Point> {
-    if is_room_done(state, amphipod_type, room_x) {
+fn find_move_to_hall_src(
+    state: &State,
+    room_x: usize,
+    amphipod_type: u8,
+    height: usize,
+) -> Option<Point> {
+    if is_room_done(state, amphipod_type, room_x, height) {
         None
     } else {
         let top = (room_x, 2);
@@ -224,7 +229,7 @@ fn find_move_to_hall_dest(state: &State, src: Point, hall_x: usize) -> Option<Po
 
 fn search_with_info(state: &mut State, info: &Info) -> Option<usize> {
     let room_xs = &info.room_xs;
-    if is_done(state, &room_xs) {
+    if is_done(state, info) {
         Some(0)
     } else if let Some(mov) = find_move_home(state, info) {
         let amphipod_type = state[mov.src];
@@ -236,7 +241,9 @@ fn search_with_info(state: &mut State, info: &Info) -> Option<usize> {
         let mut best_score = None;
         for (i, room_x) in room_xs.iter().enumerate() {
             let room_amphipod_type = b'A' + (i as u8);
-            if let Some(src) = find_move_to_hall_src(state, *room_x, room_amphipod_type) {
+            if let Some(src) =
+                find_move_to_hall_src(state, *room_x, room_amphipod_type, info.height)
+            {
                 for hall_x in info.hall_seat_xs.iter() {
                     if let Some(dest) = find_move_to_hall_dest(state, src, *hall_x) {
                         let mov = Move { src, dest };
