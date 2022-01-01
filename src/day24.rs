@@ -309,31 +309,54 @@ fn simplify(expr: &Expr) -> Option<Expr> {
 
 #[test]
 fn test_simplify() {
-    let zero = Rc::new(Expr::Constant(0));
-    let one = Rc::new(Expr::Constant(1));
-    let two = Rc::new(Expr::Constant(2));
-    let fourteen = Rc::new(Expr::Constant(14));
-    let a = Rc::new(Expr::Input(InputName::new('a')));
-    let some_a = Some(Expr::Input(InputName::new('a')));
-    assert_eq!(None, simplify(&Expr::Op(Add, one.clone(), a.clone())));
+    fn get_w_expression(lines: &[&str]) -> Expr {
+        let mut state = State::start();
+        for line in lines {
+            state = state.after(&Instruction::parse(line));
+        }
+        (*state.registers[0]).clone()
+    }
+
+    // Register starts at 0
+    assert_eq!(Expr::Constant(0), get_w_expression(&[]));
+
+    // Math with constants evaluates the expression
     assert_eq!(
-        Some(Expr::Constant(3)),
-        simplify(&Expr::Op(Add, one.clone(), two.clone()))
+        get_w_expression(&["add w 10"]),
+        get_w_expression(&["add w 5", "add x 5", "add w x"])
     );
-    assert_eq!(some_a, simplify(&Expr::Op(Add, a.clone(), zero.clone())));
-    assert_eq!(some_a, simplify(&Expr::Op(Add, zero.clone(), a.clone())));
+
+    // Adding 0 is identity in both directions
     assert_eq!(
-        Some(Expr::Constant(0)),
-        simplify(&Expr::Op(Mul, zero.clone(), a.clone()))
+        get_w_expression(&["inp w"]),
+        get_w_expression(&["inp x", "add w x"])
     );
     assert_eq!(
-        Some(Expr::Constant(0)),
-        simplify(&Expr::Op(Div, zero.clone(), a.clone()))
+        get_w_expression(&["inp w"]),
+        get_w_expression(&["inp w", "add w x"])
+    );
+
+    // Multiplying by 1 is identity in both directions
+    assert_eq!(
+        get_w_expression(&["inp w"]),
+        get_w_expression(&["inp x", "add w 1", "mul w x"])
     );
     assert_eq!(
-        Some(Expr::Constant(0)),
-        simplify(&Expr::Op(Eql, fourteen.clone(), a.clone()));
-    )
+        get_w_expression(&["inp w"]),
+        get_w_expression(&["inp w", "add x 1", "mul w x"])
+    );
+
+    // Dividing by 1 is identity
+    assert_eq!(
+        get_w_expression(&["inp w"]),
+        get_w_expression(&["inp w", "add x 1", "div w x"])
+    );
+
+    // Comparing an input with something out of range is always 0
+    assert_eq!(
+        get_w_expression(&[]),
+        get_w_expression(&["inp w", "add x 14", "eql w x"])
+    );
 }
 
 struct State {
