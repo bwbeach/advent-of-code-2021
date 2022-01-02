@@ -398,6 +398,9 @@ fn get_range(expr: &Expr) -> RangeInclusive<i64> {
 }
 
 fn simplify(expr: &Expr) -> Option<Expr> {
+    fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
+        [(a, b), (b, a)]
+    }
     if let Expr::Op(op_name, lhs_rc, rhs_rc) = expr {
         let lhs = &**lhs_rc;
         let rhs = &**rhs_rc;
@@ -411,38 +414,29 @@ fn simplify(expr: &Expr) -> Option<Expr> {
         }
         match op_name {
             Add => {
-                if let Some(n) = get_constant(lhs) {
-                    if n == 0 {
-                        return Some(rhs.clone());
+                for (side_a, side_b) in both_ways(lhs, rhs) {
+                    if let Some(n) = get_constant(side_b) {
+                        if n == 0 {
+                            return Some(side_a.clone());
+                        }
                     }
-                }
-                if let Some(n) = get_constant(rhs) {
-                    if n == 0 {
-                        return Some(lhs.clone());
-                    }
-                }
-                if let Expr::Poly(lhs_poly) = lhs {
-                    if let Expr::Poly(rhs_poly) = rhs {
-                        return Some(Expr::Poly(*lhs_poly + *rhs_poly));
+                    if let Expr::Poly(poly_a) = side_a {
+                        if let Expr::Poly(poly_b) = side_b {
+                            return Some(Expr::Poly(*poly_a + *poly_b));
+                        }
                     }
                 }
                 None
             }
             Mul => {
-                if let Some(n) = get_constant(lhs) {
-                    if n == 0 {
-                        return Some(Expr::constant(0));
-                    }
-                    if n == 1 {
-                        return Some(rhs.clone());
-                    }
-                }
-                if let Some(n) = get_constant(rhs) {
-                    if n == 0 {
-                        return Some(Expr::constant(0));
-                    }
-                    if n == 1 {
-                        return Some(lhs.clone());
+                for (side_a, side_b) in both_ways(lhs, rhs) {
+                    if let Some(n) = get_constant(side_a) {
+                        if n == 0 {
+                            return Some(Expr::constant(0));
+                        }
+                        if n == 1 {
+                            return Some(side_b.clone());
+                        }
                     }
                 }
                 if let Expr::Poly(lhs_poly) = lhs {
