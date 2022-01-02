@@ -1,0 +1,28 @@
+
+
+
+inp w      # get input
+mul x 0    # x = 0
+add x z
+mod x 26   # x = peek()
+div z 1    # pop or not.  when popping range start should reduce
+add x 12
+eql x w    # decision about pushing
+eql x 0
+mul y 0
+add y 25
+mul y x
+add y 1    # 1 = no push; 26 = push
+mul z y    # push or not
+mul y 0    
+add y w    # y = input
+add y 1
+mul y x
+add z y    # maybe add input to stack
+
+
+
+#### mul x y
+
+This is the decision about whether to push or not
+

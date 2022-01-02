@@ -233,6 +233,7 @@ impl Polynomial {
     }
 
     fn input(input_name: InputName) -> Polynomial {
+        // TODO: get_range only works if coefficients are positive
         let mut coefficients = [0; 15];
         coefficients[input_name.index()] = 1;
         Polynomial { coefficients }
@@ -249,11 +250,7 @@ impl Polynomial {
     fn modulo(&self, scalar: i64) -> Polynomial {
         let mut coefficients = [0; 15];
         for i in 0..15 {
-            let c = coefficients[i];
-            if c < 0 || scalar <= 0 {
-                panic!("bad mod: {:?} {:?}", c, scalar);
-            }
-            coefficients[i] = self.coefficients[i] % scalar;
+            coefficients[i] = perform_op(Mod, self.coefficients[i], scalar);
         }
         Polynomial { coefficients }
     }
@@ -261,6 +258,24 @@ impl Polynomial {
     fn get_constant(&self) -> Option<i64> {
         if (0..14).all(|i| self.coefficients[i] == 0) {
             Some(self.coefficients[14])
+        } else {
+            None
+        }
+    }
+
+    /// Dividing through by a scalar works if you know the sum of remainders
+    /// is less than the scalar, so they can be divide independently.
+    fn div(&self, scalar: i64) -> Option<Polynomial> {
+        let mut max_remainder = self.coefficients[14] % scalar;
+        for i in 0..14 {
+            max_remainder += (self.coefficients[i] % scalar) * 9;
+        }
+        if max_remainder < scalar {
+            let mut coefficients = [0; 15];
+            for i in 0..15 {
+                coefficients[i] = perform_op(Div, self.coefficients[i], scalar);
+            }
+            Some(Polynomial { coefficients })
         } else {
             None
         }
@@ -444,7 +459,6 @@ fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
 }
 
 fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
-    println!("SIM {:?}", expr);
     match expr {
         Expr::Poly(polynomial) => {
             if let Some(n) = polynomial.get_constant() {
@@ -482,14 +496,14 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
                         None
                     }
                 }
-                Div => {
-                    // In the context of a mod operation, we can recursively look at addends and multiplicands.
-                    if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
-                    } else {
-                        None
-                    }
-                }
+                // Div => {
+                //     // In the context of a mod operation, we can recursively look at addends and multiplicands.
+                //     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
+                //         Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
+                //     } else {
+                //         None
+                //     }
+                // }
                 _ => None,
             }
         }
@@ -585,6 +599,11 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                     if n == 1 {
                         return Some(lhs.clone());
                     }
+                    if let Expr::Poly(polynomial) = lhs {
+                        if let Some(simpler_polynomial) = polynomial.div(n) {
+                            return Some(Expr::Poly(simpler_polynomial));
+                        }
+                    }
                 }
                 if get_range(expr) == (0..=0) {
                     return Some(Expr::constant(0));
@@ -600,6 +619,16 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                         return Some(Expr::Op(Mod, Rc::new(simplified), rhs_rc.clone()));
                     }
                 }
+                {
+                    let lhs_range = get_range(lhs);
+                    let rhs_range = get_range(rhs);
+                    if 0 <= *lhs_range.start() && *lhs_range.end() < *rhs_range.start() {
+                        println!("YYY from {:?} {:?}", expr, get_range(expr));
+                        println!("YYY to   {:?} {:?}", lhs, get_range(lhs));
+                        return Some(lhs.clone());
+                    }
+                }
+
                 None
             }
             Eql => {
@@ -706,6 +735,30 @@ fn test_simplify() {
         get_w_expression(&["add w 25", "inp x", "div x 26", "mul w x"]),
         // (a / 26) * 25
         get_w_expression(&["inp w", "div w 26", "add x 25", "mul w x"])
+    );
+
+    // When the numerator of a mod is within the range of the mod, you can drop the mod
+    assert_eq!(
+        // (a = b)
+        get_w_expression(&["inp x", "inp y", "add w x", "eql w y"]),
+        // (a = b) mod 5
+        get_w_expression(&["inp x", "inp y", "add w x", "eql w y", "mod w 5"])
+    );
+
+    // Dividing a polynomial by a scalar can divide through if we know the remainders
+    // can't add up to more than the scalar.
+    assert_eq!(
+        // [a + 7]
+        get_w_expression(&["inp w", "add x 7", "add w x"]),
+        // [26a + b + 185] / 26
+        get_w_expression(&[
+            "inp w",
+            "mul w 26",
+            "inp x",
+            "add w x",
+            "add w 185",
+            "div w 26"
+        ]),
     );
 
     // Distributive multiplication
