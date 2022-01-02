@@ -337,6 +337,23 @@ impl Expr {
     fn input(input_name: InputName) -> Expr {
         Expr::Poly(Polynomial::input(input_name))
     }
+
+    fn evaluate(self: &Expr, inputs: &[i64; 14]) -> i64 {
+        match self {
+            Expr::Poly(polynomial) => {
+                let mut result = polynomial.coefficients[14]; // constant part
+                for (input, coefficient) in inputs.iter().zip(polynomial.coefficients) {
+                    result += input * coefficient;
+                }
+                result
+            }
+            Expr::Op(op_name, lhs_rc, rhs_rc) => {
+                let lhs = &**lhs_rc;
+                let rhs = &**rhs_rc;
+                perform_op(*op_name, lhs.evaluate(inputs), rhs.evaluate(inputs))
+            }
+        }
+    }
 }
 
 impl fmt::Debug for Expr {
@@ -767,16 +784,61 @@ fn print_tree(expr: &Expr, indentation: usize) {
     }
 }
 
+fn evaluate_instructions(instructions: &[Instruction], inputs: &[i64; 14]) -> i64 {
+    let mut next_input_index = 0;
+    let mut registers: [i64; 4] = [0; 4];
+    for instruction in instructions {
+        match instruction {
+            Inp(register_name) => {
+                registers[register_name.index()] = inputs[next_input_index];
+                next_input_index += 1;
+            }
+            Op(op_name, lhs_register_name, rhs) => {
+                let rhs_value = match rhs {
+                    Constant(n) => *n,
+                    Register(rhs_register_name) => registers[rhs_register_name.index()],
+                };
+                registers[lhs_register_name.index()] =
+                    perform_op(*op_name, registers[lhs_register_name.index()], rhs_value);
+            }
+        }
+    }
+    registers[3]
+}
+
+fn evaluate_one(instructions: &[Instruction], z_expr: &Expr, inputs: &[i64; 14]) {
+    let from_instructions = evaluate_instructions(instructions, inputs);
+    let from_simplified = z_expr.evaluate(inputs);
+    println!(
+        "EVAL: {:?} => {:?} {:?}",
+        inputs, from_instructions, from_simplified
+    );
+    if from_instructions != from_simplified {
+        panic!("ERROR: Simplified expression did not match");
+    }
+}
+
 fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut state = State::start();
+    let mut instructions = Vec::new();
     for line in lines {
         println!("INSTRUCTION: {:?}\n", line);
         let instruction = Instruction::parse(line);
         state = state.after(&instruction);
-        print_state(&state);
+        instructions.push(instruction);
+        // print_state(&state);
     }
     println!("\n\n\n\n\n\n");
-    print_tree(&state.registers[3], 0);
+    let z_expr = &state.registers[3];
+    print_tree(z_expr, 0);
+    for n in 0..=8 {
+        let mut inputs = [n; 14];
+        for i in 0..13 {
+            evaluate_one(&instructions[..], z_expr, &inputs);
+            inputs[i] += 1;
+        }
+    }
+    evaluate_one(&instructions[..], z_expr, &[9; 14]);
     Ok(0)
 }
 
