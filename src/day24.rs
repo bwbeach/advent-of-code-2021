@@ -397,10 +397,46 @@ fn get_range(expr: &Expr) -> RangeInclusive<i64> {
     }
 }
 
-fn simplify(expr: &Expr) -> Option<Expr> {
-    fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
-        [(a, b), (b, a)]
+fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
+    [(a, b), (b, a)]
+}
+
+fn simplify_sum_in_mod(expr: &Expr, modulus: i64) -> Option<Expr> {
+    if let Expr::Op(op_name, lhs_rc, rhs_rc) = expr {
+        let lhs = &**lhs_rc;
+        let rhs = &**rhs_rc;
+        match op_name {
+            Add => {
+                // In the context of a mod operation, we can recursively look at addends.
+                for (side_a, side_b) in both_ways(lhs, rhs) {
+                    if let Some(simplified_a) = simplify_sum_in_mod(side_a, modulus) {
+                        let simplified_sum =
+                            Expr::Op(Add, Rc::new(simplified_a.clone()), Rc::new(side_b.clone()));
+                        if let Some(even_simpler) = simplify(&simplified_sum) {
+                            return Some(even_simpler);
+                        } else {
+                            return Some(simplified_sum);
+                        }
+                    }
+                }
+            }
+            Mul => {
+                // In the context of a mod operation, multiplying by the modulus is the same as multiplying by 0
+                for (side_a, _) in both_ways(lhs, rhs) {
+                    if let Some(n) = get_constant(side_a) {
+                        if n % modulus == 0 {
+                            return Some(Expr::constant(0));
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
     }
+    None
+}
+
+fn simplify(expr: &Expr) -> Option<Expr> {
     if let Expr::Op(op_name, lhs_rc, rhs_rc) = expr {
         let lhs = &**lhs_rc;
         let rhs = &**rhs_rc;
@@ -460,9 +496,12 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 None
             }
             Mod => {
-                if let Expr::Poly(lhs_poly) = lhs {
-                    if let Some(n) = get_constant(rhs) {
-                        return Some(Expr::Poly(lhs_poly.modulo(n)));
+                if let Some(modulus) = get_constant(rhs) {
+                    if let Expr::Poly(lhs_poly) = lhs {
+                        return Some(Expr::Poly(lhs_poly.modulo(modulus)));
+                    }
+                    if let Some(simplified) = simplify_sum_in_mod(lhs, modulus) {
+                        return Some(Expr::Op(Mod, Rc::new(simplified), rhs_rc.clone()));
                     }
                 }
                 None
@@ -556,6 +595,14 @@ fn test_simplify() {
         // (a * 5 + 8) % 5
         get_w_expression(&["inp w", "mul w 5", "add w 8", "mod w 5"]),
     );
+
+    // The mod of a sum of terms can drop terms that multiply by the modulus.
+    assert_eq!(
+        // 8
+        get_w_expression(&["add w 3"]),
+        // ((a = 2) * 5 + 8) % 5
+        get_w_expression(&["inp w", "eql w 2", "mul w 5", "add w 8", "mod w 5"]),
+    )
 }
 
 struct State {
@@ -632,6 +679,24 @@ fn print_state(state: &State) {
     println!("");
 }
 
+fn indent(indentation: usize) {
+    for _ in 0..indentation {
+        print!("  ");
+    }
+}
+
+fn print_tree(expr: &Expr, indentation: usize) {
+    match expr {
+        Expr::Poly(polynomial) => println!("{:?}", polynomial),
+        Expr::Op(op_name, lhs_rc, rhs_rc) => {
+            print!("{:?} ", op_name);
+            print_tree(&**lhs_rc, indentation + 1);
+            indent(indentation + 1);
+            print_tree(&**rhs_rc, indentation + 1);
+        }
+    }
+}
+
 fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut state = State::start();
     for line in lines {
@@ -640,7 +705,8 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
         state = state.after(&instruction);
         print_state(&state);
     }
-    print_state(&state);
+    println!("\n\n\n\n\n\n");
+    print_tree(&state.registers[3], 0);
     Ok(0)
 }
 
