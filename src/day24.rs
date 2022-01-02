@@ -401,39 +401,69 @@ fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
     [(a, b), (b, a)]
 }
 
-fn simplify_sum_in_mod(expr: &Expr, modulus: i64) -> Option<Expr> {
-    if let Expr::Op(op_name, lhs_rc, rhs_rc) = expr {
-        let lhs = &**lhs_rc;
-        let rhs = &**rhs_rc;
-        match op_name {
-            Add => {
-                // In the context of a mod operation, we can recursively look at addends.
-                for (side_a, side_b) in both_ways(lhs, rhs) {
-                    if let Some(simplified_a) = simplify_sum_in_mod(side_a, modulus) {
-                        let simplified_sum =
-                            Expr::Op(Add, Rc::new(simplified_a.clone()), Rc::new(side_b.clone()));
-                        if let Some(even_simpler) = simplify(&simplified_sum) {
-                            return Some(even_simpler);
-                        } else {
-                            return Some(simplified_sum);
-                        }
+fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
+    println!("SIM {:?}", expr);
+    match expr {
+        Expr::Poly(polynomial) => {
+            if let Some(n) = polynomial.get_constant() {
+                if n % modulus != n {
+                    println!("    => {:?}", n % modulus);
+                    Some(Expr::constant(n % modulus))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        }
+        Expr::Op(op_name, lhs_rc, rhs_rc) => {
+            let lhs = &**lhs_rc;
+            let rhs = &**rhs_rc;
+            match op_name {
+                Add => {
+                    // In the context of a mod operation, we can recursively look at addends and multiplicands.
+                    if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
+                        Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
+                    } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
+                        Some(Expr::Op(*op_name, lhs_rc.clone(), Rc::new(simplified_rhs)))
+                    } else {
+                        None
                     }
                 }
-            }
-            Mul => {
-                // In the context of a mod operation, multiplying by the modulus is the same as multiplying by 0
-                for (side_a, _) in both_ways(lhs, rhs) {
-                    if let Some(n) = get_constant(side_a) {
-                        if n % modulus == 0 {
-                            return Some(Expr::constant(0));
-                        }
+                Mul => {
+                    // In the context of a mod operation, we can recursively look at addends and multiplicands.
+                    if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
+                        Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
+                    } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
+                        Some(Expr::Op(*op_name, lhs_rc.clone(), Rc::new(simplified_rhs)))
+                    } else {
+                        None
                     }
                 }
+                Div => {
+                    // In the context of a mod operation, we can recursively look at addends and multiplicands.
+                    if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
+                        Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
+                    } else {
+                        None
+                    }
+                }
+                _ => None,
             }
-            _ => {}
         }
     }
-    None
+}
+
+fn simplify_in_mod(expr: &Expr, modulus: i64) -> Option<Expr> {
+    if let Some(simpler) = simplify_in_mod_helper(expr, modulus) {
+        if let Some(even_simpler) = simplify(&simpler) {
+            Some(even_simpler)
+        } else {
+            Some(simpler)
+        }
+    } else {
+        None
+    }
 }
 
 fn simplify(expr: &Expr) -> Option<Expr> {
@@ -500,7 +530,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                     if let Expr::Poly(lhs_poly) = lhs {
                         return Some(Expr::Poly(lhs_poly.modulo(modulus)));
                     }
-                    if let Some(simplified) = simplify_sum_in_mod(lhs, modulus) {
+                    if let Some(simplified) = simplify_in_mod(lhs, modulus) {
                         return Some(Expr::Op(Mod, Rc::new(simplified), rhs_rc.clone()));
                     }
                 }
