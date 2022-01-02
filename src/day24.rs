@@ -60,12 +60,12 @@ impl InputName {
         InputName { name }
     }
 
-    fn parse(s: &str) -> InputName {
-        if s.len() != 1 {
-            panic!("input name too long");
-        }
-        InputName::new(s.chars().next().unwrap())
-    }
+    // fn parse(s: &str) -> InputName {
+    //     if s.len() != 1 {
+    //         panic!("input name too long");
+    //     }
+    //     InputName::new(s.chars().next().unwrap())
+    // }
 
     fn index(&self) -> usize {
         (self.name as usize) - ('a' as usize)
@@ -245,6 +245,14 @@ impl Polynomial {
         }
         Polynomial { coefficients }
     }
+
+    fn get_constant(&self) -> Option<i64> {
+        if (0..14).all(|i| self.coefficients[i] == 0) {
+            Some(self.coefficients[14])
+        } else {
+            None
+        }
+    }
 }
 
 impl ops::Add for Polynomial {
@@ -261,23 +269,34 @@ impl ops::Add for Polynomial {
 
 impl fmt::Debug for Polynomial {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let count = self.coefficients.iter().filter(|c| **c != 0).count();
+        if 1 < count {
+            write!(f, "[")?;
+        }
         let mut first = true;
         for (coefficient, input_name) in self.coefficients.iter().zip(InputName::all().iter()) {
             if *coefficient != 0 {
                 if first {
-                    write!(f, " + ")?;
                     first = false;
+                } else {
+                    write!(f, " + ")?;
                 }
-                write!(f, "{:?}{:?}", coefficient, input_name)?;
+                if *coefficient == 1 {
+                    write!(f, "{:?}", input_name)?;
+                } else {
+                    write!(f, "{:?}{:?}", coefficient, input_name)?;
+                }
             }
         }
         let constant = self.coefficients[14];
-        if constant != 0 {
-            if first {
+        if constant != 0 || first {
+            if !first {
                 write!(f, " + ")?;
-                first = false;
             }
             write!(f, "{:?}", constant)?;
+        }
+        if 1 < count {
+            write!(f, "]")?;
         }
         Ok(())
     }
@@ -286,34 +305,63 @@ impl fmt::Debug for Polynomial {
 #[test]
 fn test_polynomial() {
     let two = Polynomial::constant(2);
-    let five = Polynomial::constant(5);
-    let ten = Polynomial::constant(10);
     let a = Polynomial::input(InputName::new('a'));
+    assert_eq!(Some(2), two.get_constant());
+    assert_eq!(None, a.get_constant());
     assert_eq!((a + two).times(5), a.times(5) + two.times(5))
 }
 
 #[derive(Clone, Eq, PartialEq)]
 enum Expr {
-    Constant(i64),
-    Input(InputName),
+    Poly(Polynomial),
     Op(OpName, Rc<Expr>, Rc<Expr>),
+}
+
+impl Expr {
+    fn constant(scalar: i64) -> Expr {
+        Expr::Poly(Polynomial::constant(scalar))
+    }
+
+    fn input(input_name: InputName) -> Expr {
+        Expr::Poly(Polynomial::input(input_name))
+    }
 }
 
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Expr::Constant(n) => write!(f, "{:?}", n),
-            Expr::Input(register_name) => write!(f, "{:?}", register_name),
+            Expr::Poly(polynomial) => write!(f, "{:?}", polynomial),
             Expr::Op(op_name, a, b) => write!(f, "({:?} {:?} {:?})", a, op_name, b),
         }
+    }
+}
+
+/// Returns the constant value of an expression if it's a polynomial
+/// with only a constant part.
+fn get_constant(expr: &Expr) -> Option<i64> {
+    if let Expr::Poly(polynomial) = expr {
+        polynomial.get_constant()
+    } else {
+        None
     }
 }
 
 /// Calculates the range of possible values of an expression
 fn get_range(expr: &Expr) -> RangeInclusive<i64> {
     match expr {
-        Expr::Constant(n) => *n..=*n,
-        Expr::Input(_) => 1..=9,
+        Expr::Poly(polynomial) => {
+            // Start with the constant part
+            let mut start = polynomial.coefficients[14];
+            let mut end = polynomial.coefficients[14];
+
+            // Update based on min/max values for each input times that input's coefficient
+            for i in 0..14 {
+                let coefficient = polynomial.coefficients[i];
+                start += coefficient * 1;
+                end += coefficient * 9;
+            }
+            start..=end
+        }
         Expr::Op(OpName, lhs_rc, rhs_rc) => {
             let lhs_range = get_range(&**lhs_rc);
             let rhs_range = get_range(&**rhs_rc);
@@ -341,52 +389,65 @@ fn simplify(expr: &Expr) -> Option<Expr> {
     if let Expr::Op(op_name, lhs_rc, rhs_rc) = expr {
         let lhs = &**lhs_rc;
         let rhs = &**rhs_rc;
-        if let Expr::Constant(a) = lhs {
-            if let Expr::Constant(b) = rhs {
-                return Some(Expr::Constant(perform_op(*op_name, *a, *b)));
+        // operating on two constants can be done now
+        if let Some(lhs_value) = get_constant(lhs) {
+            if let Some(rhs_value) = get_constant(rhs) {
+                return Some(Expr::Poly(Polynomial::constant(perform_op(
+                    *op_name, lhs_value, rhs_value,
+                ))));
             }
         }
         match op_name {
             Add => {
-                if let Expr::Constant(n) = lhs {
-                    if *n == 0 {
+                if let Some(n) = get_constant(lhs) {
+                    if n == 0 {
                         return Some(rhs.clone());
                     }
                 }
-                if let Expr::Constant(n) = rhs {
-                    if *n == 0 {
+                if let Some(n) = get_constant(rhs) {
+                    if n == 0 {
                         return Some(lhs.clone());
+                    }
+                }
+                if let Expr::Poly(lhs_poly) = lhs {
+                    if let Expr::Poly(rhs_poly) = rhs {
+                        return Some(Expr::Poly(*lhs_poly + *rhs_poly));
                     }
                 }
                 None
             }
             Mul => {
-                if let Expr::Constant(n) = lhs {
-                    if *n == 0 {
-                        return Some(Expr::Constant(0));
+                if let Some(n) = get_constant(lhs) {
+                    if n == 0 {
+                        return Some(Expr::constant(0));
                     }
-                    if *n == 1 {
+                    if n == 1 {
                         return Some(rhs.clone());
                     }
                 }
-                if let Expr::Constant(n) = rhs {
-                    if *n == 0 {
-                        return Some(Expr::Constant(0));
+                if let Some(n) = get_constant(rhs) {
+                    if n == 0 {
+                        return Some(Expr::constant(0));
                     }
-                    if *n == 1 {
+                    if n == 1 {
                         return Some(lhs.clone());
+                    }
+                }
+                if let Expr::Poly(lhs_poly) = lhs {
+                    if let Some(n) = get_constant(rhs) {
+                        return Some(Expr::Poly(lhs_poly.times(n)));
                     }
                 }
                 None
             }
             Div => {
-                if let Expr::Constant(n) = lhs {
-                    if *n == 0 {
-                        return Some(Expr::Constant(0));
+                if let Some(n) = get_constant(lhs) {
+                    if n == 0 {
+                        return Some(Expr::constant(0));
                     }
                 }
-                if let Expr::Constant(n) = rhs {
-                    if *n == 1 {
+                if let Some(n) = get_constant(rhs) {
+                    if n == 1 {
                         return Some(lhs.clone());
                     }
                 }
@@ -398,7 +459,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 let ranges_overlap = max(lhs_range.start(), rhs_range.start())
                     <= min(lhs_range.end(), rhs_range.end());
                 if !ranges_overlap {
-                    return Some(Expr::Constant(0));
+                    return Some(Expr::constant(0));
                 }
                 None
             }
@@ -420,7 +481,7 @@ fn test_simplify() {
     }
 
     // Register starts at 0
-    assert_eq!(Expr::Constant(0), get_w_expression(&[]));
+    assert_eq!(Expr::constant(0), get_w_expression(&[]));
 
     // Math with constants evaluates the expression
     assert_eq!(
@@ -464,7 +525,15 @@ fn test_simplify() {
     assert_eq!(
         get_w_expression(&[]),
         get_w_expression(&["inp w", "mul w 100", "mod w 20", "add x 25", "eql w x"])
-    )
+    );
+
+    // Multiplying a polynomial times a constant
+    assert_eq!(
+        // a * 5 + 5
+        get_w_expression(&["inp w", "mul w 5", "add w 5"]),
+        // (a + 1) * 5
+        get_w_expression(&["inp w", "add w 1", "mul w 5"])
+    );
 }
 
 struct State {
@@ -487,10 +556,10 @@ impl State {
         State {
             next_input: Some(InputName::new('a')),
             registers: [
-                Rc::new(Expr::Constant(0)),
-                Rc::new(Expr::Constant(0)),
-                Rc::new(Expr::Constant(0)),
-                Rc::new(Expr::Constant(0)),
+                Rc::new(Expr::constant(0)),
+                Rc::new(Expr::constant(0)),
+                Rc::new(Expr::constant(0)),
+                Rc::new(Expr::constant(0)),
             ],
         }
     }
@@ -503,7 +572,7 @@ impl State {
                         next_input: input_name.next(),
                         registers: set_register(
                             *register_name,
-                            Expr::Input(input_name),
+                            Expr::input(input_name),
                             &self.registers,
                         ),
                     }
@@ -517,7 +586,7 @@ impl State {
                     Register(rhs_register_name) => {
                         self.registers[rhs_register_name.index()].clone()
                     }
-                    Constant(n) => Rc::new(Expr::Constant(*n)),
+                    Constant(n) => Rc::new(Expr::constant(*n)),
                 };
                 let mut expr = Expr::Op(*op_name, lhs, rhs);
                 while let Some(simplified) = simplify(&expr) {
