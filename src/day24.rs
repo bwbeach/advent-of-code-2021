@@ -504,11 +504,32 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                             return Some(side_b.clone());
                         }
                     }
-                }
-                if let Expr::Poly(lhs_poly) = lhs {
-                    if let Some(n) = get_constant(rhs) {
-                        return Some(Expr::Poly(lhs_poly.times(n)));
+                    if let Expr::Poly(side_a_poly) = side_a {
+                        if let Some(n) = get_constant(side_b) {
+                            return Some(Expr::Poly(side_a_poly.times(n)));
+                        }
                     }
+                    // if let Expr::Op(Add, addend_1_rc, addend_2_rc) = side_a {
+                    //     let addend_1 = &**addend_1_rc;
+                    //     let addend_2 = &**addend_2_rc;
+                    //     return Some(Expr::Op(
+                    //         Add,
+                    //         Rc::new(Expr::Op(
+                    //             Mul,
+                    //             Rc::new(addend_1.clone()),
+                    //             Rc::new(side_b.clone()),
+                    //         )),
+                    //         Rc::new(Expr::Op(
+                    //             Mul,
+                    //             Rc::new(addend_2.clone()),
+                    //             Rc::new(side_b.clone()),
+                    //         )),
+                    //     ));
+                    // }
+                }
+                // Put constants on the left if they can't be folded in
+                if let Some(n) = get_constant(rhs) {
+                    return Some(Expr::Op(Mul, rhs_rc.clone(), lhs_rc.clone()));
                 }
                 None
             }
@@ -632,7 +653,23 @@ fn test_simplify() {
         get_w_expression(&["add w 3"]),
         // ((a = 2) * 5 + 8) % 5
         get_w_expression(&["inp w", "eql w 2", "mul w 5", "add w 8", "mod w 5"]),
-    )
+    );
+
+    // Constants go on the left
+    assert_eq!(
+        // 25 * (a / 26)
+        get_w_expression(&["add w 25", "inp x", "div x 26", "mul w x"]),
+        // (a / 26) * 25
+        get_w_expression(&["inp w", "div w 26", "add x 25", "mul w x"])
+    );
+
+    // Distributive multiplication
+    // assert_eq!(
+    //     // a * b + a * c
+    //     get_w_expression(&["inp w", "add x w", "inp y", "mul w y", "inp y", "mul x y", "add w x"]),
+    //     // a * (b + c)
+    //     get_w_expression(&["inp w", "inp x", "inp y", "add x y", "mul w x"])
+    // );
 }
 
 struct State {
@@ -716,6 +753,9 @@ fn indent(indentation: usize) {
 }
 
 fn print_tree(expr: &Expr, indentation: usize) {
+    let range = get_range(expr);
+    println!("{{{:?} .. {:?}}}", range.start(), range.end());
+    indent(indentation);
     match expr {
         Expr::Poly(polynomial) => println!("{:?}", polynomial),
         Expr::Op(op_name, lhs_rc, rhs_rc) => {
