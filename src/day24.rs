@@ -375,6 +375,37 @@ fn get_constant(expr: &Expr) -> Option<i64> {
     }
 }
 
+/// What the possible range of values when multiplying values
+/// from two ranges?
+fn mul_range(lhs: &RangeInclusive<i64>, rhs: &RangeInclusive<i64>) -> RangeInclusive<i64> {
+    let mut start = lhs.start() * rhs.start();
+    let mut end = lhs.end() * rhs.end();
+    for left in [lhs.start(), lhs.end()] {
+        for right in [rhs.start(), rhs.end()] {
+            start = min(start, left * right);
+            end = max(end, left * right);
+        }
+    }
+    start..=end
+}
+
+#[test]
+fn test_mul_range() {
+    assert_eq!(25..=100, mul_range(&(5..=10), &(5..=10)));
+    assert_eq!(-50..=100, mul_range(&(-5..=10), &(5..=10)));
+    assert_eq!(-100..=-25, mul_range(&(-10..=-5), &(5..=10)));
+    assert_eq!(-100..=50, mul_range(&(-10..=5), &(5..=10)));
+}
+
+/// What the possible range of values when multiplying values
+/// from two ranges?
+fn div_range(lhs: &RangeInclusive<i64>, rhs: &RangeInclusive<i64>) -> RangeInclusive<i64> {
+    if *lhs.start() < 0 || *rhs.start() <= 0 {
+        panic!("div range includes 0 or negative: {:?}  {:?}", lhs, rhs);
+    }
+    RangeInclusive::new(lhs.start() / rhs.end(), lhs.end() / rhs.start())
+}
+
 /// Calculates the range of possible values of an expression
 fn get_range(expr: &Expr) -> RangeInclusive<i64> {
     match expr {
@@ -399,14 +430,8 @@ fn get_range(expr: &Expr) -> RangeInclusive<i64> {
                     lhs_range.start() + rhs_range.start(),
                     lhs_range.end() + rhs_range.end(),
                 ),
-                Mul => RangeInclusive::new(
-                    lhs_range.start() * rhs_range.start(),
-                    lhs_range.end() * rhs_range.end(),
-                ),
-                Div => RangeInclusive::new(
-                    lhs_range.start() / rhs_range.end(),
-                    lhs_range.end() / rhs_range.start(),
-                ),
+                Mul => mul_range(&lhs_range, &rhs_range),
+                Div => div_range(&lhs_range, &rhs_range),
                 Mod => RangeInclusive::new(0, *rhs_range.end()),
                 Eql => 0..=1,
             }
@@ -560,6 +585,9 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                     if n == 1 {
                         return Some(lhs.clone());
                     }
+                }
+                if get_range(expr) == (0..=0) {
+                    return Some(Expr::constant(0));
                 }
                 None
             }
@@ -771,12 +799,16 @@ fn indent(indentation: usize) {
 
 fn print_tree(expr: &Expr, indentation: usize) {
     let range = get_range(expr);
-    println!("{{{:?} .. {:?}}}", range.start(), range.end());
-    indent(indentation);
     match expr {
-        Expr::Poly(polynomial) => println!("{:?}", polynomial),
+        Expr::Poly(polynomial) => println!(
+            "{:?} {{{:?} .. {:?}}}",
+            polynomial,
+            range.start(),
+            range.end()
+        ),
         Expr::Op(op_name, lhs_rc, rhs_rc) => {
-            print!("{:?} ", op_name);
+            println!("{:?} {{{:?} .. {:?}}}", op_name, range.start(), range.end());
+            indent(indentation + 1);
             print_tree(&**lhs_rc, indentation + 1);
             indent(indentation + 1);
             print_tree(&**rhs_rc, indentation + 1);
@@ -826,7 +858,7 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
         let instruction = Instruction::parse(line);
         state = state.after(&instruction);
         instructions.push(instruction);
-        // print_state(&state);
+        print_state(&state);
     }
     println!("\n\n\n\n\n\n");
     let z_expr = &state.registers[3];
