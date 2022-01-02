@@ -246,6 +246,18 @@ impl Polynomial {
         Polynomial { coefficients }
     }
 
+    fn modulo(&self, scalar: i64) -> Polynomial {
+        let mut coefficients = [0; 15];
+        for i in 0..15 {
+            let c = coefficients[i];
+            if c < 0 || scalar <= 0 {
+                panic!("bad mod: {:?} {:?}", c, scalar);
+            }
+            coefficients[i] = self.coefficients[i] % scalar;
+        }
+        Polynomial { coefficients }
+    }
+
     fn get_constant(&self) -> Option<i64> {
         if (0..14).all(|i| self.coefficients[i] == 0) {
             Some(self.coefficients[14])
@@ -362,10 +374,10 @@ fn get_range(expr: &Expr) -> RangeInclusive<i64> {
             }
             start..=end
         }
-        Expr::Op(OpName, lhs_rc, rhs_rc) => {
+        Expr::Op(op_name, lhs_rc, rhs_rc) => {
             let lhs_range = get_range(&**lhs_rc);
             let rhs_range = get_range(&**rhs_rc);
-            match OpName {
+            match op_name {
                 Add => RangeInclusive::new(
                     lhs_range.start() + rhs_range.start(),
                     lhs_range.end() + rhs_range.end(),
@@ -453,6 +465,14 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 }
                 None
             }
+            Mod => {
+                if let Expr::Poly(lhs_poly) = lhs {
+                    if let Some(n) = get_constant(rhs) {
+                        return Some(Expr::Poly(lhs_poly.modulo(n)));
+                    }
+                }
+                None
+            }
             Eql => {
                 let lhs_range = get_range(lhs);
                 let rhs_range = get_range(rhs);
@@ -533,6 +553,14 @@ fn test_simplify() {
         get_w_expression(&["inp w", "mul w 5", "add w 5"]),
         // (a + 1) * 5
         get_w_expression(&["inp w", "add w 1", "mul w 5"])
+    );
+
+    // Modding a polynomial with a constant
+    assert_eq!(
+        // 8
+        get_w_expression(&["add w 3"]),
+        // (a * 5 + 8) % 5
+        get_w_expression(&["inp w", "mul w 5", "add w 8", "mod w 5"]),
     );
 }
 
