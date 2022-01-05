@@ -29,6 +29,7 @@ mod day9;
 mod grid;
 mod types;
 mod util;
+mod value_range;
 
 use types::{AdventResult, Answer, Day, DayPart};
 use util::lines_in_file;

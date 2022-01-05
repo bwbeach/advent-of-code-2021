@@ -1,28 +1,67 @@
-
-
+https://itnext.io/modern-c-in-advent-of-code-day24-4a7a11000778
+https://github.com/bjorng/advent-of-code-2021/blob/d169003b03ef75f8c552f12165553557b13f0b0b/day24/lib/day24.ex
 
 inp w      # get input
 mul x 0    # x = 0
-add x z
+add x z    
 mod x 26   # x = peek()
 div z 1    # pop or not.  when popping range start should reduce
-add x 12
+add x 12   # add to popped value
 eql x w    # decision about pushing
-eql x 0
+eql x 0    # 1 = push, 0 = no push
 mul y 0
 add y 25
 mul y x
-add y 1    # 1 = no push; 26 = push
+add y 1    # constant to add to input var
 mul z y    # push or not
 mul y 0    
 add y w    # y = input
-add y 1
+add y 1    # add to value to push
 mul y x
 add z y    # maybe add input to stack
 
 
 
-#### mul x y
+#### whether to push or not  (search for "eql x w")
 
-This is the decision about whether to push or not
+too many pushes!
+
+a yes
+b yes
+c yes
+d yes
+e maybe
+f yes
+g yes
+h maybe
+i yes
+j maybe
+k yes
+l maybe
+m maybe
+n maybe
+
+
+
+
+
+
+#### Whether to pop or not
+
+div z 1
+div z 1
+div z 1
+div z 1
+div z 26
+div z 1
+div z 1
+div z 26
+div z 26
+div z 26
+div z 1
+div z 26
+div z 26
+div z 26
+
+
 
