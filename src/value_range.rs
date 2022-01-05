@@ -38,12 +38,12 @@ impl ValueRange {
 
     /// The range of possible inputs for the left input given the right input and output of add.
     /// And vice-versa -- add is commutative.
-    pub fn add_backward(b: ValueRange, z: ValueRange) -> ValueRange {
+    pub fn add_backward(b: ValueRange, z: ValueRange) -> Option<ValueRange> {
         // The lowest possible start is the one that combines with b.end to get z.start
         let start = z.start - b.end;
         // The highest possible end is the one that combines with b.start to get z.end
         let end = z.end - b.start;
-        ValueRange { start, end }
+        Some(ValueRange { start, end })
     }
 
     /// The range of values possible after adding two inputs with known ranges.
@@ -57,6 +57,25 @@ impl ValueRange {
         ValueRange {
             start: extreme_values.into_iter().min().unwrap(),
             end: extreme_values.into_iter().max().unwrap(),
+        }
+    }
+
+    /// The range of possible inputs for the left input given the right input and output of mul.
+    /// And vice-versa -- mul is commutative.
+    pub fn mul_backward(b: ValueRange, z: ValueRange) -> Option<ValueRange> {
+        // If 0 is in the input range we know, then we don't know anything
+        // about the other input range.
+        if b.contains(0) {
+            None
+        } else {
+            // TODO: negative numbers
+            if z.start < 0 {
+                panic!("negative numbers not implemented");
+            }
+            Some(ValueRange {
+                start: (z.start + b.end - 1) / b.end,
+                end: z.end / b.start,
+            })
         }
     }
 }
@@ -102,9 +121,9 @@ fn test_ops() {
         b_range: ValueRange,
         z_range: ValueRange,
         op: fn(i64, i64) -> i64,
-        range_op: fn(ValueRange, ValueRange) -> ValueRange,
+        range_op: fn(ValueRange, ValueRange) -> Option<ValueRange>,
     ) {
-        let a_range = range_op(b_range, z_range);
+        let a_range = range_op(b_range, z_range).unwrap();
         println!("{:?} {:?} {:?}", a_range, b_range, z_range);
         assert_eq!(
             true,
@@ -160,5 +179,11 @@ fn test_ops() {
         ValueRange::new(5, 7),
         |a, b| a * b,
         ValueRange::mul_forward,
+    );
+    check_backward_left(
+        ValueRange::new(5, 7),
+        ValueRange::new(13, 41),
+        |a, b| a * b,
+        ValueRange::mul_backward,
     );
 }
