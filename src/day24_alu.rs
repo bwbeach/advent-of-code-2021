@@ -5,6 +5,7 @@ use std::str;
 #[derive(Debug, Eq, PartialEq)]
 pub enum AluError {
     BadRegisterName(String),
+    NotRegisterOrConstant(String),
 }
 
 /// The name of a register in the ALU
@@ -111,5 +112,37 @@ impl InputName {
 impl fmt::Debug for InputName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.name)
+    }
+}
+
+/// Holds the right-hand side of many instructions, which can be
+/// either an integer constant or a register name.
+///
+pub enum RegisterOrConstant {
+    Register(RegisterName),
+    Constant(i64),
+}
+
+use RegisterOrConstant::*;
+
+impl fmt::Debug for RegisterOrConstant {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Register(register_name) => write!(f, "{:?}", register_name),
+            Constant(n) => write!(f, "{:?}", n),
+        }
+    }
+}
+
+impl str::FromStr for RegisterOrConstant {
+    type Err = AluError;
+    fn from_str(s: &str) -> Result<RegisterOrConstant, AluError> {
+        if let Ok(register_name) = s.parse::<RegisterName>() {
+            Ok(Register(register_name))
+        } else if let Ok(n) = s.parse::<i64>() {
+            Ok(Constant(n))
+        } else {
+            Err(AluError::NotRegisterOrConstant(s.to_string()))
+        }
     }
 }

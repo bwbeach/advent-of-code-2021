@@ -4,35 +4,10 @@ use std::ops;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-use crate::day24_alu::{InputName, RegisterName};
+use crate::day24_alu::{InputName, RegisterName, RegisterOrConstant};
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-enum RegisterOrConstant {
-    Register(RegisterName),
-    Constant(i64),
-}
-
 use RegisterOrConstant::*;
-
-impl RegisterOrConstant {
-    // TODO: convert to FromStr
-    fn parse(s: &str) -> RegisterOrConstant {
-        if let Ok(n) = s.parse::<i64>() {
-            Constant(n)
-        } else {
-            Register(s.parse().unwrap())
-        }
-    }
-}
-
-impl fmt::Debug for RegisterOrConstant {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Register(register_name) => write!(f, "{:?}", register_name),
-            Constant(n) => write!(f, "{:?}", n),
-        }
-    }
-}
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum OpName {
@@ -135,7 +110,7 @@ impl Instruction {
             Op(
                 OpName::parse(words[0]),
                 words[1].parse().unwrap(),
-                RegisterOrConstant::parse(words[2]),
+                words[2].parse().unwrap(),
             )
         }
     }
