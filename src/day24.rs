@@ -4,90 +4,11 @@ use std::ops;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-use crate::day24_alu::{InputName, RegisterName, RegisterOrConstant};
+use crate::day24_alu::{InputName, OpName, RegisterName, RegisterOrConstant};
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
-use RegisterOrConstant::*;
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-enum OpName {
-    Add,
-    Mul,
-    Div,
-    Mod,
-    Eql,
-}
-
 use OpName::*;
-
-impl OpName {
-    fn parse(s: &str) -> OpName {
-        match s {
-            "add" => Add,
-            "mul" => Mul,
-            "div" => Div,
-            "mod" => Mod,
-            "eql" => Eql,
-            _ => panic!("bad op name: {:?}", s),
-        }
-    }
-
-    fn perform(self, a: i64, b: i64) -> i64 {
-        match self {
-            Add => a + b,
-            Mul => a * b,
-            Div => {
-                if b == 0 {
-                    panic!("division by 0");
-                } else {
-                    a / b
-                }
-            }
-            Mod => {
-                if b == 0 {
-                    panic!("mod by 0");
-                } else if a < 0 || b < 0 {
-                    panic!("mod with negative");
-                } else {
-                    a % b
-                }
-            }
-            Eql => {
-                if a == b {
-                    1
-                } else {
-                    0
-                }
-            }
-        }
-    }
-}
-
-impl fmt::Debug for OpName {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let short_name = match self {
-            Add => '+',
-            Mul => '*',
-            Div => '/',
-            Mod => '%',
-            Eql => '=',
-        };
-        write!(f, "{}", short_name)
-    }
-}
-
-#[test]
-fn test_perform_op() {
-    assert_eq!(10, Add.perform(2, 8));
-    assert_eq!(16, Mul.perform(2, 8));
-    assert_eq!(3, Div.perform(7, 2));
-    assert_eq!(3, Div.perform(-7, -2));
-    assert_eq!(-3, Div.perform(-7, 2));
-    assert_eq!(-3, Div.perform(7, -2));
-    assert_eq!(1, Mod.perform(7, 2));
-    assert_eq!(0, Eql.perform(3, 5));
-    assert_eq!(1, Eql.perform(5, 5));
-}
+use RegisterOrConstant::*;
 
 #[derive(Debug)]
 enum Instruction {
