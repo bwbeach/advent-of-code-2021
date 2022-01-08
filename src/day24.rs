@@ -549,7 +549,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                     // }
                 }
                 // Put constants on the left if they can't be folded in
-                if let Some(n) = get_constant(rhs) {
+                if let Some(_) = get_constant(rhs) {
                     return Some(Expr::Op(Mul, rhs_rc.clone(), lhs_rc.clone()));
                 }
                 None
@@ -606,7 +606,6 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 }
                 None
             }
-            _ => None,
         }
     } else {
         None

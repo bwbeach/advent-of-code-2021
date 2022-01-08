@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use itertools::{all, Itertools};
+use itertools::all;
 use ndarray::{s, Array2}; // TODO: fix unused warning, and keep available for tests
 
 use crate::types::{AdventResult, Answer, Day, DayPart};

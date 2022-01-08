@@ -25,7 +25,7 @@ type Point = (usize, usize);
 ///
 struct Info {
     // The width of the grid.
-    width: usize,
+    // width: usize,
 
     // The height of the grid.
     height: usize,
@@ -112,7 +112,7 @@ fn is_path_clear(
     state: &State,
 ) -> bool {
     let (home_x, home_y) = home_location;
-    let (hall_x, hall_y) = hall_location;
+    let (hall_x, _) = hall_location;
     let vertical_clear = (1..home_y).all(|y| state[(home_x, y)] == b'.');
     let mut hall_range = if hall_x < home_x {
         (hall_x + 1)..home_x
@@ -160,7 +160,7 @@ fn get_info(state: &State) -> Info {
         .filter(|x| !room_xs.contains(x))
         .collect();
     Info {
-        width,
+        // width,
         height,
         room_xs,
         hall_seat_xs,
