@@ -31,6 +31,36 @@ impl OpName {
             _ => panic!("bad op name: {:?}", s),
         }
     }
+
+    fn perform(self, a: i64, b: i64) -> i64 {
+        match self {
+            Add => a + b,
+            Mul => a * b,
+            Div => {
+                if b == 0 {
+                    panic!("division by 0");
+                } else {
+                    a / b
+                }
+            }
+            Mod => {
+                if b == 0 {
+                    panic!("mod by 0");
+                } else if a < 0 || b < 0 {
+                    panic!("mod with negative");
+                } else {
+                    a % b
+                }
+            }
+            Eql => {
+                if a == b {
+                    1
+                } else {
+                    0
+                }
+            }
+        }
+    }
 }
 
 impl fmt::Debug for OpName {
@@ -46,47 +76,17 @@ impl fmt::Debug for OpName {
     }
 }
 
-fn perform_op(op_name: OpName, a: i64, b: i64) -> i64 {
-    match op_name {
-        Add => a + b,
-        Mul => a * b,
-        Div => {
-            if b == 0 {
-                panic!("division by 0");
-            } else {
-                a / b
-            }
-        }
-        Mod => {
-            if b == 0 {
-                panic!("mod by 0");
-            } else if a < 0 || b < 0 {
-                panic!("mod with negative");
-            } else {
-                a % b
-            }
-        }
-        Eql => {
-            if a == b {
-                1
-            } else {
-                0
-            }
-        }
-    }
-}
-
 #[test]
 fn test_perform_op() {
-    assert_eq!(10, perform_op(Add, 2, 8));
-    assert_eq!(16, perform_op(Mul, 2, 8));
-    assert_eq!(3, perform_op(Div, 7, 2));
-    assert_eq!(3, perform_op(Div, -7, -2));
-    assert_eq!(-3, perform_op(Div, -7, 2));
-    assert_eq!(-3, perform_op(Div, 7, -2));
-    assert_eq!(1, perform_op(Mod, 7, 2));
-    assert_eq!(0, perform_op(Eql, 3, 5));
-    assert_eq!(1, perform_op(Eql, 5, 5));
+    assert_eq!(10, Add.perform(2, 8));
+    assert_eq!(16, Mul.perform(2, 8));
+    assert_eq!(3, Div.perform(7, 2));
+    assert_eq!(3, Div.perform(-7, -2));
+    assert_eq!(-3, Div.perform(-7, 2));
+    assert_eq!(-3, Div.perform(7, -2));
+    assert_eq!(1, Mod.perform(7, 2));
+    assert_eq!(0, Eql.perform(3, 5));
+    assert_eq!(1, Eql.perform(5, 5));
 }
 
 #[derive(Debug)]
@@ -148,7 +148,7 @@ impl Polynomial {
     fn modulo(&self, scalar: i64) -> Polynomial {
         let mut coefficients = [0; 15];
         for i in 0..15 {
-            coefficients[i] = perform_op(Mod, self.coefficients[i], scalar);
+            coefficients[i] = Mod.perform(self.coefficients[i], scalar);
         }
         Polynomial { coefficients }
     }
@@ -171,7 +171,7 @@ impl Polynomial {
         if max_remainder < scalar {
             let mut coefficients = [0; 15];
             for i in 0..15 {
-                coefficients[i] = perform_op(Div, self.coefficients[i], scalar);
+                coefficients[i] = Div.perform(self.coefficients[i], scalar);
             }
             Some(Polynomial { coefficients })
         } else {
@@ -263,7 +263,7 @@ impl Expr {
             Expr::Op(op_name, lhs_rc, rhs_rc) => {
                 let lhs = &**lhs_rc;
                 let rhs = &**rhs_rc;
-                perform_op(*op_name, lhs.evaluate(inputs), rhs.evaluate(inputs))
+                op_name.perform(lhs.evaluate(inputs), rhs.evaluate(inputs))
             }
         }
     }
@@ -427,9 +427,9 @@ fn simplify(expr: &Expr) -> Option<Expr> {
         // operating on two constants can be done now
         if let Some(lhs_value) = get_constant(lhs) {
             if let Some(rhs_value) = get_constant(rhs) {
-                return Some(Expr::Poly(Polynomial::constant(perform_op(
-                    *op_name, lhs_value, rhs_value,
-                ))));
+                return Some(Expr::Poly(Polynomial::constant(
+                    op_name.perform(lhs_value, rhs_value),
+                )));
             }
         }
         match op_name {
@@ -781,7 +781,7 @@ fn evaluate_instructions(instructions: &[Instruction], inputs: &[i64; 14]) -> i6
                     Register(rhs_register_name) => registers[rhs_register_name.index()],
                 };
                 registers[lhs_register_name.index()] =
-                    perform_op(*op_name, registers[lhs_register_name.index()], rhs_value);
+                    op_name.perform(registers[lhs_register_name.index()], rhs_value);
             }
         }
     }
