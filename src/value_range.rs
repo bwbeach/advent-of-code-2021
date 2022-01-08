@@ -78,6 +78,40 @@ impl ValueRange {
             })
         }
     }
+
+    /// The range of values possible after div-ing two inputs with known ranges.
+    pub fn div_forward(a: ValueRange, b: ValueRange) -> ValueRange {
+        if b.contains(0) {
+            panic!("division by ranges including 0 not supported");
+        }
+        if a.start < 0 || b.start < 0 {
+            panic!("negative division not supported");
+        }
+        ValueRange {
+            start: a.start / b.end,
+            end: a.end / b.start,
+        }
+    }
+
+    /// The range of values possible after mod-ing two inputs with known ranges.
+    pub fn mod_forward(a: ValueRange, b: ValueRange) -> ValueRange {
+        if b.contains(0) {
+            panic!("mod by ranges including 0 not supported");
+        }
+        if a.start < 0 || b.start < 0 {
+            panic!("negative mod not supported");
+        }
+        if a.end < b.start {
+            // We know all of the a values are within the modulo,
+            // and will come through unchanged.
+            a
+        } else {
+            ValueRange {
+                start: 0,
+                end: b.end - 1,
+            }
+        }
+    }
 }
 
 impl IntoIterator for ValueRange {
@@ -101,6 +135,7 @@ fn test_ops() {
         range_op: fn(ValueRange, ValueRange) -> ValueRange,
     ) {
         let z_range = range_op(a_range, b_range);
+        println!("{:?} {:?} {:?}", a_range, b_range, z_range);
         let mut z_min = None;
         let mut z_max = None;
         for a in a_range {
@@ -124,7 +159,6 @@ fn test_ops() {
         range_op: fn(ValueRange, ValueRange) -> Option<ValueRange>,
     ) {
         let a_range = range_op(b_range, z_range).unwrap();
-        println!("{:?} {:?} {:?}", a_range, b_range, z_range);
         assert_eq!(
             true,
             b_range
@@ -185,5 +219,23 @@ fn test_ops() {
         ValueRange::new(13, 41),
         |a, b| a * b,
         ValueRange::mul_backward,
+    );
+    check_forward(
+        ValueRange::new(13, 29),
+        ValueRange::new(5, 7),
+        |a, b| a / b,
+        ValueRange::div_forward,
+    );
+    check_forward(
+        ValueRange::new(13, 29),
+        ValueRange::new(5, 7),
+        |a, b| a % b,
+        ValueRange::mod_forward,
+    );
+    check_forward(
+        ValueRange::new(5, 7),
+        ValueRange::new(13, 29),
+        |a, b| a % b,
+        ValueRange::mod_forward,
     );
 }
