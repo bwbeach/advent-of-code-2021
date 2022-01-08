@@ -4,52 +4,8 @@ use std::ops;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-use crate::day24_alu::RegisterName;
+use crate::day24_alu::{InputName, RegisterName};
 use crate::types::{AdventResult, Answer, Day, DayPart};
-
-/// Inputs are named 'a' through 'n'
-#[derive(Clone, Copy, Eq, PartialEq)]
-struct InputName {
-    name: char,
-}
-
-impl InputName {
-    fn all() -> Vec<InputName> {
-        ('a'..='n').map(|c| InputName::new(c)).collect()
-    }
-
-    fn new(name: char) -> InputName {
-        if name < 'a' || 'n' < name {
-            panic!("bad input name: {}", name);
-        }
-        InputName { name }
-    }
-
-    // fn parse(s: &str) -> InputName {
-    //     if s.len() != 1 {
-    //         panic!("input name too long");
-    //     }
-    //     InputName::new(s.chars().next().unwrap())
-    // }
-
-    fn index(&self) -> usize {
-        (self.name as usize) - ('a' as usize)
-    }
-
-    fn next(&self) -> Option<InputName> {
-        if self.name == 'n' {
-            None
-        } else {
-            Some(InputName::new(((self.name as u8) + 1) as char))
-        }
-    }
-}
-
-impl fmt::Debug for InputName {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.name)
-    }
-}
 
 enum RegisterOrConstant {
     Register(RegisterName),
@@ -299,7 +255,7 @@ impl fmt::Debug for Polynomial {
 #[test]
 fn test_polynomial() {
     let two = Polynomial::constant(2);
-    let a = Polynomial::input(InputName::new('a'));
+    let a = Polynomial::input(InputName::first());
     assert_eq!(Some(2), two.get_constant());
     assert_eq!(None, a.get_constant());
     assert_eq!((a + two).times(5), a.times(5) + two.times(5))
@@ -754,7 +710,7 @@ fn set_register(
 impl State {
     fn start() -> State {
         State {
-            next_input: Some(InputName::new('a')),
+            next_input: Some(InputName::first()),
             registers: [
                 Rc::new(Expr::constant(0)),
                 Rc::new(Expr::constant(0)),

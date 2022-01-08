@@ -67,3 +67,49 @@ fn test_register_name() {
         "x".parse::<RegisterName>().unwrap()
     );
 }
+
+/// The name of one of the inputs
+///
+/// Inputs are named 'a' through 'n'
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct InputName {
+    name: char,
+}
+
+impl InputName {
+    pub fn all() -> Vec<InputName> {
+        ('a'..='n').map(|name| InputName { name }).collect()
+    }
+
+    /// Returns the index of this input.
+    ///
+    /// The first input value is 'a', then 'b', etc., and they
+    /// are indexed starting at 0.
+    ///
+    pub fn index(&self) -> usize {
+        (self.name as usize) - ('a' as usize)
+    }
+
+    /// Returns the name of the next input, if there is one.
+    ///
+    pub fn next(&self) -> Option<InputName> {
+        if self.name == 'n' {
+            None
+        } else {
+            let name = ((self.name as u8) + 1) as char;
+            Some(InputName { name })
+        }
+    }
+
+    /// Returns the name of the first input.  (Used mostly for tests)
+    pub fn first() -> InputName {
+        let name = 'a';
+        InputName { name }
+    }
+}
+
+impl fmt::Debug for InputName {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.name)
+    }
+}
