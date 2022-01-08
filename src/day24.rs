@@ -59,11 +59,12 @@ enum RegisterOrConstant {
 use RegisterOrConstant::*;
 
 impl RegisterOrConstant {
+    // TODO: convert to FromStr
     fn parse(s: &str) -> RegisterOrConstant {
         if let Ok(n) = s.parse::<i64>() {
             Constant(n)
         } else {
-            Register(RegisterName::parse(s))
+            Register(s.parse().unwrap())
         }
     }
 }
@@ -166,17 +167,18 @@ enum Instruction {
 use Instruction::*;
 
 impl Instruction {
+    // TODO: convert to FromStr
     fn parse(s: &str) -> Instruction {
         let words: Vec<_> = s.split_whitespace().collect();
         if words[0] == "inp" {
             if words.len() != 2 {
                 panic!("wrong length of inp instruction");
             }
-            Inp(RegisterName::parse(words[1]))
+            Inp(words[1].parse().unwrap())
         } else {
             Op(
                 OpName::parse(words[0]),
-                RegisterName::parse(words[1]),
+                words[1].parse().unwrap(),
                 RegisterOrConstant::parse(words[2]),
             )
         }

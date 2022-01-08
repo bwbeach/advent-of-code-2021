@@ -17,24 +17,15 @@ pub struct RegisterName {
 }
 
 impl RegisterName {
+    /// Returns the names of all registers in the ALU
     pub fn all() -> Vec<RegisterName> {
-        ('w'..='z').map(|c| RegisterName::new(c)).collect()
+        ('w'..='z').map(|name| (RegisterName { name })).collect()
     }
 
-    pub fn new(name: char) -> RegisterName {
-        if name < 'w' || 'z' < name {
-            panic!("bad register name: {}", name);
-        }
-        RegisterName { name }
-    }
-
-    pub fn parse(s: &str) -> RegisterName {
-        if s.len() != 1 {
-            panic!("register name wrong length: {:?}", s);
-        }
-        RegisterName::new(s.chars().next().unwrap())
-    }
-
+    /// Returns the index of this register in the ALU.
+    ///
+    /// Registers are indexed starting at 0.
+    ///
     pub fn index(&self) -> usize {
         (self.name as usize) - ('w' as usize)
     }
@@ -71,5 +62,8 @@ fn test_register_name() {
         AluError::BadRegisterName("m".to_string()),
         "m".parse::<RegisterName>().err().unwrap()
     );
-    assert_eq!(RegisterName::new('x'), "x".parse::<RegisterName>().unwrap());
+    assert_eq!(
+        RegisterName { name: 'x' },
+        "x".parse::<RegisterName>().unwrap()
+    );
 }
