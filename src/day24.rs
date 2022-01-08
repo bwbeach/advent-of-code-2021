@@ -29,7 +29,7 @@ impl Instruction {
             Inp(words[1].parse().unwrap())
         } else {
             Op(
-                OpName::parse(words[0]),
+                words[0].parse().unwrap(),
                 words[1].parse().unwrap(),
                 words[2].parse().unwrap(),
             )

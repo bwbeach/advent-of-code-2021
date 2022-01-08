@@ -6,6 +6,7 @@ use std::str;
 pub enum AluError {
     BadRegisterName(String),
     NotRegisterOrConstant(String),
+    NotOpName(String),
 }
 
 /// The name of a register in the ALU
@@ -160,17 +161,6 @@ pub enum OpName {
 use OpName::*;
 
 impl OpName {
-    pub fn parse(s: &str) -> OpName {
-        match s {
-            "add" => Add,
-            "mul" => Mul,
-            "div" => Div,
-            "mod" => Mod,
-            "eql" => Eql,
-            _ => panic!("bad op name: {:?}", s),
-        }
-    }
-
     pub fn perform(self, a: i64, b: i64) -> i64 {
         match self {
             Add => a + b,
@@ -212,6 +202,20 @@ impl fmt::Debug for OpName {
             Eql => '=',
         };
         write!(f, "{}", short_name)
+    }
+}
+
+impl str::FromStr for OpName {
+    type Err = AluError;
+    fn from_str(s: &str) -> Result<OpName, AluError> {
+        match s {
+            "add" => Ok(Add),
+            "mul" => Ok(Mul),
+            "div" => Ok(Div),
+            "mod" => Ok(Mod),
+            "eql" => Ok(Eql),
+            _ => Err(AluError::NotOpName(s.to_string())),
+        }
     }
 }
 
