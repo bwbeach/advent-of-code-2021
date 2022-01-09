@@ -232,16 +232,6 @@ impl convert::From<&Expr> for NewExpr {
     }
 }
 
-/// Returns the constant value of an expression if it's a polynomial
-/// with only a constant part.
-fn get_constant(expr: &Expr) -> Option<i64> {
-    if let Expr::Poly(polynomial) = expr {
-        polynomial.get_constant()
-    } else {
-        None
-    }
-}
-
 /// Calculates the range of possible values of an expression
 fn get_range(expr: &NewExpr) -> ValueRange {
     match expr.details() {
@@ -328,7 +318,7 @@ fn simplify_in_mod_helper(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
 
 fn simplify_in_mod(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
     if let Some(simpler) = simplify_in_mod_helper(expr, modulus) {
-        if let Some(even_simpler) = simplify(simpler.details()) {
+        if let Some(even_simpler) = simplify(&simpler) {
             Some(NewExpr::from(even_simpler))
         } else {
             Some(NewExpr::from(simpler))
@@ -338,9 +328,8 @@ fn simplify_in_mod(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
     }
 }
 
-fn simplify(expr: &Expr) -> Option<NewExpr> {
-    // TODO: NewExpr
-    if let Expr::Op(op_name, lhs, rhs) = expr {
+fn simplify(expr: &NewExpr) -> Option<NewExpr> {
+    if let Expr::Op(op_name, lhs, rhs) = expr.details() {
         // operating on two constants can be done now
         if let Some(lhs_value) = lhs.get_constant() {
             if let Some(rhs_value) = rhs.get_constant() {
@@ -420,7 +409,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                         }
                     }
                 }
-                if get_range(&NewExpr::from(expr)) == ValueRange::new(0, 0) {
+                if get_range(expr) == ValueRange::new(0, 0) {
                     return Some(NewExpr::constant(0));
                 }
                 None
@@ -438,7 +427,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                     let lhs_range = get_range(lhs);
                     let rhs_range = get_range(rhs);
                     if 0 <= lhs_range.start() && lhs_range.end() < rhs_range.start() {
-                        println!("YYY from {:?} {:?}", expr, get_range(&NewExpr::from(expr)));
+                        println!("YYY from {:?} {:?}", expr, get_range(expr));
                         println!("YYY to   {:?} {:?}", lhs, get_range(lhs));
                         return Some(lhs.clone());
                     }
@@ -639,7 +628,7 @@ impl State {
                     Constant(n) => NewExpr::constant(*n),
                 };
                 let mut expr = NewExpr::op(*op_name, lhs, rhs);
-                while let Some(simplified) = simplify(expr.details()) {
+                while let Some(simplified) = simplify(&expr) {
                     println!("SIMPLIFY {:?} => {:?}", expr, simplified);
                     expr = simplified;
                 }
