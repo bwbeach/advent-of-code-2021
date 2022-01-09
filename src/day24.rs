@@ -138,16 +138,6 @@ enum Expr {
     Op(OpName, NewExpr, NewExpr),
 }
 
-impl Expr {
-    fn constant(scalar: i64) -> Expr {
-        Expr::Poly(Polynomial::constant(scalar))
-    }
-
-    fn input(input_name: InputName) -> Expr {
-        Expr::Poly(Polynomial::input(input_name))
-    }
-}
-
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -171,6 +161,11 @@ impl NewExpr {
     /// Returns an expression holding a constant value
     fn constant(n: i64) -> NewExpr {
         NewExpr::poly(Polynomial::constant(n))
+    }
+
+    /// Returns an expression holding one of the input values
+    fn input(input_name: InputName) -> NewExpr {
+        NewExpr::poly(Polynomial::input(input_name))
     }
 
     /// Returns an expression holding a polynomial
@@ -463,7 +458,7 @@ fn test_simplify() {
     }
 
     // Register starts at 0
-    assert_eq!(Expr::constant(0), get_w_expression(&[]));
+    assert_eq!(NewExpr::constant(0), get_w_expression(&[]));
 
     // Math with constants evaluates the expression
     assert_eq!(
@@ -581,11 +576,11 @@ struct State {
 
 fn set_register(
     register_name: RegisterName,
-    value: Expr,
+    value: NewExpr,
     old_registers: &[NewExpr; 4],
 ) -> [NewExpr; 4] {
     let mut result = old_registers.clone();
-    result[register_name.index()] = NewExpr::from(&value);
+    result[register_name.index()] = value;
     result
 }
 
@@ -610,7 +605,7 @@ impl State {
                         next_input: input_name.next(),
                         registers: set_register(
                             *register_name,
-                            Expr::input(input_name),
+                            NewExpr::input(input_name),
                             &self.registers,
                         ),
                     }
@@ -633,11 +628,7 @@ impl State {
                 }
                 State {
                     next_input: self.next_input,
-                    registers: set_register(
-                        *lhs_register_name,
-                        expr.details().clone(),
-                        &self.registers,
-                    ),
+                    registers: set_register(*lhs_register_name, expr, &self.registers),
                 }
             }
         }
