@@ -24,6 +24,14 @@ impl ValueRange {
         ValueRange { start, end }
     }
 
+    pub fn start(&self) -> i64 {
+        self.start
+    }
+
+    pub fn end(&self) -> i64 {
+        self.end
+    }
+
     /// Does this range contain the given value?
     pub fn contains(&self, a: i64) -> bool {
         self.start <= a && a <= self.end
@@ -111,6 +119,12 @@ impl ValueRange {
                 end: b.end - 1,
             }
         }
+    }
+
+    /// The range of values possible after eql-ing two inputs with known ranges.
+    pub fn eql_forward(a: ValueRange, b: ValueRange) -> ValueRange {
+        // TODO: zero if ranges do not overlap
+        ValueRange::new(0, 1)
     }
 }
 

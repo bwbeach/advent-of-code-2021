@@ -1,11 +1,11 @@
 use std::cmp::{max, min};
 use std::fmt;
 use std::ops;
-use std::ops::RangeInclusive;
 use std::rc::Rc;
 
 use crate::day24_alu::{InputName, Instruction, OpName, RegisterName, RegisterOrConstant};
 use crate::types::{AdventResult, Answer, Day, DayPart};
+use crate::value_range::ValueRange;
 
 use Instruction::*;
 use OpName::*;
@@ -183,39 +183,8 @@ fn get_constant(expr: &Expr) -> Option<i64> {
     }
 }
 
-/// What the possible range of values when multiplying values
-/// from two ranges?
-fn mul_range(lhs: &RangeInclusive<i64>, rhs: &RangeInclusive<i64>) -> RangeInclusive<i64> {
-    let mut start = lhs.start() * rhs.start();
-    let mut end = lhs.end() * rhs.end();
-    for left in [lhs.start(), lhs.end()] {
-        for right in [rhs.start(), rhs.end()] {
-            start = min(start, left * right);
-            end = max(end, left * right);
-        }
-    }
-    start..=end
-}
-
-#[test]
-fn test_mul_range() {
-    assert_eq!(25..=100, mul_range(&(5..=10), &(5..=10)));
-    assert_eq!(-50..=100, mul_range(&(-5..=10), &(5..=10)));
-    assert_eq!(-100..=-25, mul_range(&(-10..=-5), &(5..=10)));
-    assert_eq!(-100..=50, mul_range(&(-10..=5), &(5..=10)));
-}
-
-/// What the possible range of values when multiplying values
-/// from two ranges?
-fn div_range(lhs: &RangeInclusive<i64>, rhs: &RangeInclusive<i64>) -> RangeInclusive<i64> {
-    if *lhs.start() < 0 || *rhs.start() <= 0 {
-        panic!("div range includes 0 or negative: {:?}  {:?}", lhs, rhs);
-    }
-    RangeInclusive::new(lhs.start() / rhs.end(), lhs.end() / rhs.start())
-}
-
 /// Calculates the range of possible values of an expression
-fn get_range(expr: &Expr) -> RangeInclusive<i64> {
+fn get_range(expr: &Expr) -> ValueRange {
     match expr {
         Expr::Poly(polynomial) => {
             // Start with the constant part
@@ -228,20 +197,17 @@ fn get_range(expr: &Expr) -> RangeInclusive<i64> {
                 start += coefficient * 1;
                 end += coefficient * 9;
             }
-            start..=end
+            ValueRange::new(start, end)
         }
         Expr::Op(op_name, lhs_rc, rhs_rc) => {
             let lhs_range = get_range(&**lhs_rc);
             let rhs_range = get_range(&**rhs_rc);
             match op_name {
-                Add => RangeInclusive::new(
-                    lhs_range.start() + rhs_range.start(),
-                    lhs_range.end() + rhs_range.end(),
-                ),
-                Mul => mul_range(&lhs_range, &rhs_range),
-                Div => div_range(&lhs_range, &rhs_range),
-                Mod => RangeInclusive::new(0, *rhs_range.end()),
-                Eql => 0..=1,
+                Add => ValueRange::add_forward(lhs_range, rhs_range),
+                Mul => ValueRange::mul_forward(lhs_range, rhs_range),
+                Div => ValueRange::div_forward(lhs_range, rhs_range),
+                Mod => ValueRange::mod_forward(lhs_range, rhs_range),
+                Eql => ValueRange::eql_forward(lhs_range, rhs_range),
             }
         }
     }
@@ -398,7 +364,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                         }
                     }
                 }
-                if get_range(expr) == (0..=0) {
+                if get_range(expr) == ValueRange::new(0, 0) {
                     return Some(Expr::constant(0));
                 }
                 None
@@ -415,7 +381,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 {
                     let lhs_range = get_range(lhs);
                     let rhs_range = get_range(rhs);
-                    if 0 <= *lhs_range.start() && *lhs_range.end() < *rhs_range.start() {
+                    if 0 <= lhs_range.start() && lhs_range.end() < rhs_range.start() {
                         println!("YYY from {:?} {:?}", expr, get_range(expr));
                         println!("YYY to   {:?} {:?}", lhs, get_range(lhs));
                         return Some(lhs.clone());
