@@ -102,6 +102,20 @@ impl ValueRange {
         }
     }
 
+    /// The range of possible numerators for `div`
+    pub fn div_backward_left(b: ValueRange, z: ValueRange) -> Option<ValueRange> {
+        if z.start < 0 {
+            panic!("negative div not supported");
+        }
+        if b.start <= 0 {
+            panic!("div rhs range includes 0 or is negative");
+        }
+        Some(ValueRange::new(
+            b.start * z.start,
+            b.end * z.end + b.end - 1,
+        ))
+    }
+
     /// The range of values possible after mod-ing two inputs with known ranges.
     pub fn mod_forward(a: ValueRange, b: ValueRange) -> ValueRange {
         if b.contains(0) {
@@ -292,6 +306,12 @@ fn test_ops() {
         ValueRange::new(5, 7),
         |a, b| a / b,
         ValueRange::div_forward,
+    );
+    check_backward_left(
+        ValueRange::new(5, 7),
+        ValueRange::new(11, 13),
+        |a, b| a / b,
+        ValueRange::div_backward_left,
     );
     check_forward(
         ValueRange::new(13, 29),

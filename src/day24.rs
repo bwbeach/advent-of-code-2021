@@ -742,6 +742,7 @@ fn left_limit(
     match op_name {
         Add => ValueRange::add_backward(right, result),
         Mul => ValueRange::mul_backward(right, result),
+        Div => ValueRange::div_backward_left(right, result),
         Eql => ValueRange::eql_backward(left, right, result),
         _ => None,
     }
