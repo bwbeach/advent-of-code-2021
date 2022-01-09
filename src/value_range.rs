@@ -123,8 +123,33 @@ impl ValueRange {
 
     /// The range of values possible after eql-ing two inputs with known ranges.
     pub fn eql_forward(a: ValueRange, b: ValueRange) -> ValueRange {
-        // TODO: zero if ranges do not overlap
-        ValueRange::new(0, 1)
+        match ValueRange::intersect(a, b) {
+            // Some intersection; could be true or false
+            Some(_) => {
+                if a.start == a.end && a == b {
+                    // both inputs are constants, and the same.  always equal
+                    ValueRange::new(1, 1)
+                } else {
+                    ValueRange::new(0, 1)
+                }
+            }
+            // no intersection; always false
+            None => ValueRange::new(0, 0),
+        }
+    }
+
+    /// Returns the intersection of the two ranges.  
+    /// ValueRanges always contain at least one value, so None is returned
+    /// if the intersection is empty.
+    ///
+    pub fn intersect(a: ValueRange, b: ValueRange) -> Option<ValueRange> {
+        let start = max(a.start, b.start);
+        let end = min(a.end, b.end);
+        if start <= end {
+            Some(ValueRange::new(start, end))
+        } else {
+            None
+        }
     }
 }
 
@@ -251,5 +276,23 @@ fn test_ops() {
         ValueRange::new(13, 29),
         |a, b| a % b,
         ValueRange::mod_forward,
+    );
+    check_forward(
+        ValueRange::new(5, 7),
+        ValueRange::new(13, 15),
+        |a, b| if a == b { 1 } else { 0 },
+        ValueRange::eql_forward,
+    );
+    check_forward(
+        ValueRange::new(5, 7),
+        ValueRange::new(6, 8),
+        |a, b| if a == b { 1 } else { 0 },
+        ValueRange::eql_forward,
+    );
+    check_forward(
+        ValueRange::new(5, 5),
+        ValueRange::new(5, 5),
+        |a, b| if a == b { 1 } else { 0 },
+        ValueRange::eql_forward,
     );
 }
