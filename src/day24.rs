@@ -216,21 +216,20 @@ impl Expr {
             }
         }
     }
+
+    fn get_range(&self) -> ValueRange {
+        match self.details() {
+            ExprDetails::Poly(polynomial) => polynomial.get_range(),
+            ExprDetails::Op(op_name, lhs, rhs) => {
+                op_name.perform_on_range(lhs.get_range(), rhs.get_range())
+            }
+        }
+    }
 }
 
 impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", *self.details)
-    }
-}
-
-/// Calculates the range of possible values of an expression
-fn get_range(expr: &Expr) -> ValueRange {
-    match expr.details() {
-        ExprDetails::Poly(polynomial) => polynomial.get_range(),
-        ExprDetails::Op(op_name, lhs, rhs) => {
-            op_name.perform_on_range(get_range(lhs), get_range(rhs))
-        }
     }
 }
 
@@ -381,7 +380,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                         }
                     }
                 }
-                if get_range(expr) == ValueRange::new(0, 0) {
+                if expr.get_range() == ValueRange::new(0, 0) {
                     return Some(Expr::constant(0));
                 }
                 None
@@ -396,11 +395,9 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                     }
                 }
                 {
-                    let lhs_range = get_range(lhs);
-                    let rhs_range = get_range(rhs);
+                    let lhs_range = lhs.get_range();
+                    let rhs_range = rhs.get_range();
                     if 0 <= lhs_range.start() && lhs_range.end() < rhs_range.start() {
-                        println!("YYY from {:?} {:?}", expr, get_range(expr));
-                        println!("YYY to   {:?} {:?}", lhs, get_range(lhs));
                         return Some(lhs.clone());
                     }
                 }
@@ -408,8 +405,8 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 None
             }
             Eql => {
-                let lhs_range = get_range(lhs);
-                let rhs_range = get_range(rhs);
+                let lhs_range = lhs.get_range();
+                let rhs_range = rhs.get_range();
                 let ranges_overlap = max(lhs_range.start(), rhs_range.start())
                     <= min(lhs_range.end(), rhs_range.end());
                 if !ranges_overlap {
@@ -611,7 +608,7 @@ impl State {
 fn print_state(state: &State) {
     // println!("next input: {:?}", state.next_input);
     for (r, expr) in RegisterName::all().into_iter().zip(state.registers.iter()) {
-        println!("{:?} = {:?}   {:?}", r, get_range(expr), *expr);
+        println!("{:?} = {:?}   {:?}", r, expr.get_range(), *expr);
     }
     println!("");
 }
@@ -623,7 +620,7 @@ fn indent(indentation: usize) {
 }
 
 fn print_tree(expr: &Expr, indentation: usize) {
-    let range = get_range(expr);
+    let range = expr.get_range();
     match expr.details() {
         ExprDetails::Poly(polynomial) => println!(
             "{:?} {{{:?} .. {:?}}}",
