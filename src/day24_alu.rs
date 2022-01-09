@@ -1,6 +1,8 @@
 use std::fmt;
 use std::str;
 
+use crate::value_range::ValueRange;
+
 /// Error type used for a variety of things in this day24_alu module.
 #[derive(Debug, Eq, PartialEq)]
 pub enum AluError {
@@ -189,6 +191,16 @@ impl OpName {
                     0
                 }
             }
+        }
+    }
+
+    pub fn perform_on_range(self, lhs_range: ValueRange, rhs_range: ValueRange) -> ValueRange {
+        match self {
+            Add => ValueRange::add_forward(lhs_range, rhs_range),
+            Mul => ValueRange::mul_forward(lhs_range, rhs_range),
+            Div => ValueRange::div_forward(lhs_range, rhs_range),
+            Mod => ValueRange::mod_forward(lhs_range, rhs_range),
+            Eql => ValueRange::eql_forward(lhs_range, rhs_range),
         }
     }
 }

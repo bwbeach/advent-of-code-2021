@@ -56,6 +56,20 @@ impl Polynomial {
         }
     }
 
+    fn get_range(&self) -> ValueRange {
+        // Start with the constant part
+        let mut start = self.coefficients[14];
+        let mut end = self.coefficients[14];
+
+        // Update based on min/max values for each input times that input's coefficient
+        for i in 0..14 {
+            let coefficient = self.coefficients[i];
+            start += coefficient * 1;
+            end += coefficient * 9;
+        }
+        ValueRange::new(start, end)
+    }
+
     /// Dividing through by a scalar works if you know the sum of remainders
     /// is less than the scalar, so they can be divide independently.
     fn div(&self, scalar: i64) -> Option<Polynomial> {
@@ -134,7 +148,7 @@ fn test_polynomial() {
 #[derive(Clone, Eq, PartialEq)]
 enum ExprDetails {
     Poly(Polynomial),
-    Op(OpName, NewExpr, NewExpr),
+    Op(OpName, Expr, Expr),
 }
 
 impl fmt::Debug for ExprDetails {
@@ -147,36 +161,36 @@ impl fmt::Debug for ExprDetails {
 }
 
 #[derive(Clone, Eq, PartialEq)]
-struct NewExpr {
+struct Expr {
     details: Rc<ExprDetails>,
 }
 
-impl NewExpr {
+impl Expr {
     /// Matchable details of this expression.
     fn details<'a>(&'a self) -> &'a ExprDetails {
         &*self.details
     }
 
     /// Returns an expression holding a constant value
-    fn constant(n: i64) -> NewExpr {
-        NewExpr::poly(Polynomial::constant(n))
+    fn constant(n: i64) -> Expr {
+        Expr::poly(Polynomial::constant(n))
     }
 
     /// Returns an expression holding one of the input values
-    fn input(input_name: InputName) -> NewExpr {
-        NewExpr::poly(Polynomial::input(input_name))
+    fn input(input_name: InputName) -> Expr {
+        Expr::poly(Polynomial::input(input_name))
     }
 
     /// Returns an expression holding a polynomial
-    fn poly(polynomial: Polynomial) -> NewExpr {
+    fn poly(polynomial: Polynomial) -> Expr {
         let details = Rc::new(ExprDetails::Poly(polynomial));
-        NewExpr { details }
+        Expr { details }
     }
 
     /// Returns an expression holding an operation
-    fn op(op_name: OpName, lhs: NewExpr, rhs: NewExpr) -> NewExpr {
+    fn op(op_name: OpName, lhs: Expr, rhs: Expr) -> Expr {
         let details = Rc::new(ExprDetails::Op(op_name, lhs, rhs));
-        NewExpr { details }
+        Expr { details }
     }
 
     /// Returns the constant value of an expression if it's a polynomial
@@ -204,38 +218,18 @@ impl NewExpr {
     }
 }
 
-impl fmt::Debug for NewExpr {
+impl fmt::Debug for Expr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", *self.details)
     }
 }
 
 /// Calculates the range of possible values of an expression
-fn get_range(expr: &NewExpr) -> ValueRange {
+fn get_range(expr: &Expr) -> ValueRange {
     match expr.details() {
-        ExprDetails::Poly(polynomial) => {
-            // Start with the constant part
-            let mut start = polynomial.coefficients[14];
-            let mut end = polynomial.coefficients[14];
-
-            // Update based on min/max values for each input times that input's coefficient
-            for i in 0..14 {
-                let coefficient = polynomial.coefficients[i];
-                start += coefficient * 1;
-                end += coefficient * 9;
-            }
-            ValueRange::new(start, end)
-        }
+        ExprDetails::Poly(polynomial) => polynomial.get_range(),
         ExprDetails::Op(op_name, lhs, rhs) => {
-            let lhs_range = get_range(lhs);
-            let rhs_range = get_range(rhs);
-            match op_name {
-                Add => ValueRange::add_forward(lhs_range, rhs_range),
-                Mul => ValueRange::mul_forward(lhs_range, rhs_range),
-                Div => ValueRange::div_forward(lhs_range, rhs_range),
-                Mod => ValueRange::mod_forward(lhs_range, rhs_range),
-                Eql => ValueRange::eql_forward(lhs_range, rhs_range),
-            }
+            op_name.perform_on_range(get_range(lhs), get_range(rhs))
         }
     }
 }
@@ -244,13 +238,13 @@ fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
     [(a, b), (b, a)]
 }
 
-fn simplify_in_mod_helper(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
+fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
     match expr.details() {
         ExprDetails::Poly(polynomial) => {
             if let Some(n) = polynomial.get_constant() {
                 if n % modulus != n {
                     println!("    => {:?}", n % modulus);
-                    Some(NewExpr::constant(n % modulus))
+                    Some(Expr::constant(n % modulus))
                 } else {
                     None
                 }
@@ -263,9 +257,9 @@ fn simplify_in_mod_helper(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
                 Add => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
                     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(NewExpr::op(*op_name, simplified_lhs, rhs.clone()))
+                        Some(Expr::op(*op_name, simplified_lhs, rhs.clone()))
                     } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
-                        Some(NewExpr::op(*op_name, lhs.clone(), simplified_rhs))
+                        Some(Expr::op(*op_name, lhs.clone(), simplified_rhs))
                     } else {
                         None
                     }
@@ -273,9 +267,9 @@ fn simplify_in_mod_helper(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
                 Mul => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
                     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(NewExpr::op(*op_name, simplified_lhs, rhs.clone()))
+                        Some(Expr::op(*op_name, simplified_lhs, rhs.clone()))
                     } else if let Some(simplified_rhs) = simplify_in_mod(&rhs, modulus) {
-                        Some(NewExpr::op(*op_name, lhs.clone(), simplified_rhs))
+                        Some(Expr::op(*op_name, lhs.clone(), simplified_rhs))
                     } else {
                         None
                     }
@@ -294,24 +288,24 @@ fn simplify_in_mod_helper(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
     }
 }
 
-fn simplify_in_mod(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
+fn simplify_in_mod(expr: &Expr, modulus: i64) -> Option<Expr> {
     if let Some(simpler) = simplify_in_mod_helper(expr, modulus) {
         if let Some(even_simpler) = simplify(&simpler) {
-            Some(NewExpr::from(even_simpler))
+            Some(Expr::from(even_simpler))
         } else {
-            Some(NewExpr::from(simpler))
+            Some(Expr::from(simpler))
         }
     } else {
         None
     }
 }
 
-fn simplify(expr: &NewExpr) -> Option<NewExpr> {
+fn simplify(expr: &Expr) -> Option<Expr> {
     if let ExprDetails::Op(op_name, lhs, rhs) = expr.details() {
         // operating on two constants can be done now
         if let Some(lhs_value) = lhs.get_constant() {
             if let Some(rhs_value) = rhs.get_constant() {
-                return Some(NewExpr::poly(Polynomial::constant(
+                return Some(Expr::poly(Polynomial::constant(
                     op_name.perform(lhs_value, rhs_value),
                 )));
             }
@@ -326,7 +320,7 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
                     }
                     if let ExprDetails::Poly(poly_a) = side_a.details() {
                         if let ExprDetails::Poly(poly_b) = side_b.details() {
-                            return Some(NewExpr::poly(*poly_a + *poly_b));
+                            return Some(Expr::poly(*poly_a + *poly_b));
                         }
                     }
                 }
@@ -336,7 +330,7 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
                 for (side_a, side_b) in both_ways(lhs, rhs) {
                     if let Some(n) = side_a.get_constant() {
                         if n == 0 {
-                            return Some(NewExpr::constant(0));
+                            return Some(Expr::constant(0));
                         }
                         if n == 1 {
                             return Some(side_b.clone());
@@ -344,7 +338,7 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
                     }
                     if let ExprDetails::Poly(side_a_poly) = side_a.details() {
                         if let Some(n) = side_b.get_constant() {
-                            return Some(NewExpr::poly(side_a_poly.times(n)));
+                            return Some(Expr::poly(side_a_poly.times(n)));
                         }
                     }
                     // if let ExprDetails::Op(Add, addend_1_rc, addend_2_rc) = side_a {
@@ -367,14 +361,14 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
                 }
                 // Put constants on the left if they can't be folded in
                 if let Some(_) = rhs.get_constant() {
-                    return Some(NewExpr::op(Mul, rhs.clone(), lhs.clone()));
+                    return Some(Expr::op(Mul, rhs.clone(), lhs.clone()));
                 }
                 None
             }
             Div => {
                 if let Some(n) = lhs.get_constant() {
                     if n == 0 {
-                        return Some(NewExpr::constant(0));
+                        return Some(Expr::constant(0));
                     }
                 }
                 if let Some(n) = rhs.get_constant() {
@@ -383,22 +377,22 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
                     }
                     if let ExprDetails::Poly(polynomial) = lhs.details() {
                         if let Some(simpler_polynomial) = polynomial.div(n) {
-                            return Some(NewExpr::poly(simpler_polynomial));
+                            return Some(Expr::poly(simpler_polynomial));
                         }
                     }
                 }
                 if get_range(expr) == ValueRange::new(0, 0) {
-                    return Some(NewExpr::constant(0));
+                    return Some(Expr::constant(0));
                 }
                 None
             }
             Mod => {
                 if let Some(modulus) = rhs.get_constant() {
                     if let ExprDetails::Poly(lhs_poly) = lhs.details() {
-                        return Some(NewExpr::poly(lhs_poly.modulo(modulus)));
+                        return Some(Expr::poly(lhs_poly.modulo(modulus)));
                     }
                     if let Some(simplified) = simplify_in_mod(lhs, modulus) {
-                        return Some(NewExpr::op(Mod, simplified, rhs.clone()));
+                        return Some(Expr::op(Mod, simplified, rhs.clone()));
                     }
                 }
                 {
@@ -419,7 +413,7 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
                 let ranges_overlap = max(lhs_range.start(), rhs_range.start())
                     <= min(lhs_range.end(), rhs_range.end());
                 if !ranges_overlap {
-                    return Some(NewExpr::constant(0));
+                    return Some(Expr::constant(0));
                 }
                 None
             }
@@ -431,7 +425,7 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
 
 #[test]
 fn test_simplify() {
-    fn get_w_expression(lines: &[&str]) -> NewExpr {
+    fn get_w_expression(lines: &[&str]) -> Expr {
         let mut state = State::start();
         for line in lines {
             let instruction = line.parse().unwrap();
@@ -441,7 +435,7 @@ fn test_simplify() {
     }
 
     // Register starts at 0
-    assert_eq!(NewExpr::constant(0), get_w_expression(&[]));
+    assert_eq!(Expr::constant(0), get_w_expression(&[]));
 
     // Math with constants evaluates the expression
     assert_eq!(
@@ -554,14 +548,10 @@ fn test_simplify() {
 
 struct State {
     next_input: Option<InputName>,
-    registers: [NewExpr; 4],
+    registers: [Expr; 4],
 }
 
-fn set_register(
-    register_name: RegisterName,
-    value: NewExpr,
-    old_registers: &[NewExpr; 4],
-) -> [NewExpr; 4] {
+fn set_register(register_name: RegisterName, value: Expr, old_registers: &[Expr; 4]) -> [Expr; 4] {
     let mut result = old_registers.clone();
     result[register_name.index()] = value;
     result
@@ -572,10 +562,10 @@ impl State {
         State {
             next_input: Some(InputName::first()),
             registers: [
-                NewExpr::constant(0),
-                NewExpr::constant(0),
-                NewExpr::constant(0),
-                NewExpr::constant(0),
+                Expr::constant(0),
+                Expr::constant(0),
+                Expr::constant(0),
+                Expr::constant(0),
             ],
         }
     }
@@ -588,7 +578,7 @@ impl State {
                         next_input: input_name.next(),
                         registers: set_register(
                             *register_name,
-                            NewExpr::input(input_name),
+                            Expr::input(input_name),
                             &self.registers,
                         ),
                     }
@@ -602,9 +592,9 @@ impl State {
                     Register(rhs_register_name) => {
                         self.registers[rhs_register_name.index()].clone()
                     }
-                    Constant(n) => NewExpr::constant(*n),
+                    Constant(n) => Expr::constant(*n),
                 };
-                let mut expr = NewExpr::op(*op_name, lhs, rhs);
+                let mut expr = Expr::op(*op_name, lhs, rhs);
                 while let Some(simplified) = simplify(&expr) {
                     println!("SIMPLIFY {:?} => {:?}", expr, simplified);
                     expr = simplified;
@@ -632,7 +622,7 @@ fn indent(indentation: usize) {
     }
 }
 
-fn print_tree(expr: &NewExpr, indentation: usize) {
+fn print_tree(expr: &Expr, indentation: usize) {
     let range = get_range(expr);
     match expr.details() {
         ExprDetails::Poly(polynomial) => println!(
@@ -673,7 +663,7 @@ fn evaluate_instructions(instructions: &[Instruction], inputs: &[i64; 14]) -> i6
     registers[3]
 }
 
-fn evaluate_one(instructions: &[Instruction], z_expr: &NewExpr, inputs: &[i64; 14]) {
+fn evaluate_one(instructions: &[Instruction], z_expr: &Expr, inputs: &[i64; 14]) {
     let from_instructions = evaluate_instructions(instructions, inputs);
     let from_simplified = z_expr.evaluate(inputs);
     println!(
