@@ -453,14 +453,13 @@ fn simplify(expr: &NewExpr) -> Option<NewExpr> {
 
 #[test]
 fn test_simplify() {
-    fn get_w_expression(lines: &[&str]) -> Expr {
-        // TODO
+    fn get_w_expression(lines: &[&str]) -> NewExpr {
         let mut state = State::start();
         for line in lines {
             let instruction = line.parse().unwrap();
             state = state.after(&instruction);
         }
-        state.registers[0].details().clone()
+        state.registers[0].clone()
     }
 
     // Register starts at 0
