@@ -226,10 +226,10 @@ impl convert::From<&Rc<Expr>> for NewExpr {
     }
 }
 
-impl convert::From<Expr> for NewExpr {
-    fn from(expr: Expr) -> NewExpr {
+impl convert::From<&Expr> for NewExpr {
+    fn from(expr: &Expr) -> NewExpr {
         NewExpr {
-            details: Rc::new(expr),
+            details: Rc::new(expr.clone()),
         }
     }
 }
@@ -278,8 +278,8 @@ fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
     [(a, b), (b, a)]
 }
 
-fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<NewExpr> {
-    match expr {
+fn simplify_in_mod_helper(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
+    match expr.details() {
         Expr::Poly(polynomial) => {
             if let Some(n) = polynomial.get_constant() {
                 if n % modulus != n {
@@ -298,13 +298,15 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<NewExpr> {
             match op_name {
                 Add => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
-                    if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
+                    if let Some(simplified_lhs) = simplify_in_mod(&NewExpr::from(lhs), modulus) {
                         Some(NewExpr::op(
                             *op_name,
                             simplified_lhs.details().clone(),
                             (**rhs_rc).clone(),
                         ))
-                    } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
+                    } else if let Some(simplified_rhs) =
+                        simplify_in_mod(&NewExpr::from(rhs), modulus)
+                    {
                         Some(NewExpr::op(
                             *op_name,
                             (**lhs_rc).clone(),
@@ -316,13 +318,15 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<NewExpr> {
                 }
                 Mul => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
-                    if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
+                    if let Some(simplified_lhs) = simplify_in_mod(&NewExpr::from(lhs), modulus) {
                         Some(NewExpr::op(
                             *op_name,
                             simplified_lhs.details().clone(),
                             (**rhs_rc).clone(),
                         ))
-                    } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
+                    } else if let Some(simplified_rhs) =
+                        simplify_in_mod(&NewExpr::from(rhs), modulus)
+                    {
                         Some(NewExpr::op(
                             *op_name,
                             (**lhs_rc).clone(),
@@ -346,7 +350,7 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<NewExpr> {
     }
 }
 
-fn simplify_in_mod(expr: &Expr, modulus: i64) -> Option<NewExpr> {
+fn simplify_in_mod(expr: &NewExpr, modulus: i64) -> Option<NewExpr> {
     if let Some(simpler) = simplify_in_mod_helper(expr, modulus) {
         if let Some(even_simpler) = simplify(simpler.details()) {
             Some(NewExpr::from(even_simpler))
@@ -375,7 +379,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                 for (side_a, side_b) in both_ways(lhs, rhs) {
                     if let Some(n) = get_constant(side_b) {
                         if n == 0 {
-                            return Some(NewExpr::from(side_a.clone()));
+                            return Some(NewExpr::from(side_a));
                         }
                     }
                     if let Expr::Poly(poly_a) = side_a {
@@ -393,7 +397,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                             return Some(NewExpr::constant(0));
                         }
                         if n == 1 {
-                            return Some(NewExpr::from(side_b.clone()));
+                            return Some(NewExpr::from(side_b));
                         }
                     }
                     if let Expr::Poly(side_a_poly) = side_a {
@@ -433,7 +437,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                 }
                 if let Some(n) = get_constant(rhs) {
                     if n == 1 {
-                        return Some(NewExpr::from(lhs.clone()));
+                        return Some(NewExpr::from(lhs));
                     }
                     if let Expr::Poly(polynomial) = lhs {
                         if let Some(simpler_polynomial) = polynomial.div(n) {
@@ -451,7 +455,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                     if let Expr::Poly(lhs_poly) = lhs {
                         return Some(NewExpr::poly(lhs_poly.modulo(modulus)));
                     }
-                    if let Some(simplified) = simplify_in_mod(lhs, modulus) {
+                    if let Some(simplified) = simplify_in_mod(&NewExpr::from(lhs), modulus) {
                         return Some(NewExpr::op(Mod, simplified.details().clone(), rhs.clone()));
                     }
                 }
@@ -461,7 +465,7 @@ fn simplify(expr: &Expr) -> Option<NewExpr> {
                     if 0 <= lhs_range.start() && lhs_range.end() < rhs_range.start() {
                         println!("YYY from {:?} {:?}", expr, get_range(expr));
                         println!("YYY to   {:?} {:?}", lhs, get_range(lhs));
-                        return Some(NewExpr::from(lhs.clone()));
+                        return Some(NewExpr::from(lhs));
                     }
                 }
 
@@ -618,7 +622,7 @@ fn set_register(
     old_registers: &[NewExpr; 4],
 ) -> [NewExpr; 4] {
     let mut result = old_registers.clone();
-    result[register_name.index()] = NewExpr::from(value);
+    result[register_name.index()] = NewExpr::from(&value);
     result
 }
 
@@ -627,10 +631,10 @@ impl State {
         State {
             next_input: Some(InputName::first()),
             registers: [
-                NewExpr::from(Expr::constant(0)),
-                NewExpr::from(Expr::constant(0)),
-                NewExpr::from(Expr::constant(0)),
-                NewExpr::from(Expr::constant(0)),
+                NewExpr::constant(0),
+                NewExpr::constant(0),
+                NewExpr::constant(0),
+                NewExpr::constant(0),
             ],
         }
     }
@@ -657,7 +661,7 @@ impl State {
                     Register(rhs_register_name) => {
                         self.registers[rhs_register_name.index()].clone()
                     }
-                    Constant(n) => NewExpr::from(Expr::constant(*n)),
+                    Constant(n) => NewExpr::constant(*n),
                 };
                 let mut expr = NewExpr::op(*op_name, lhs.details().clone(), rhs.details().clone());
                 while let Some(simplified) = simplify(expr.details()) {
