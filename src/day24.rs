@@ -282,9 +282,17 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
                 Add => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
                     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
+                        Some(Expr::Op(
+                            *op_name,
+                            Rc::new(simplified_lhs.details().clone()),
+                            rhs_rc.clone(),
+                        ))
                     } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
-                        Some(Expr::Op(*op_name, lhs_rc.clone(), Rc::new(simplified_rhs)))
+                        Some(Expr::Op(
+                            *op_name,
+                            lhs_rc.clone(),
+                            Rc::new(simplified_rhs.details().clone()),
+                        ))
                     } else {
                         None
                     }
@@ -292,9 +300,17 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
                 Mul => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
                     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(Expr::Op(*op_name, Rc::new(simplified_lhs), rhs_rc.clone()))
+                        Some(Expr::Op(
+                            *op_name,
+                            Rc::new(simplified_lhs.details().clone()),
+                            rhs_rc.clone(),
+                        ))
                     } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
-                        Some(Expr::Op(*op_name, lhs_rc.clone(), Rc::new(simplified_rhs)))
+                        Some(Expr::Op(
+                            *op_name,
+                            lhs_rc.clone(),
+                            Rc::new(simplified_rhs.details().clone()),
+                        ))
                     } else {
                         None
                     }
@@ -313,12 +329,12 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
     }
 }
 
-fn simplify_in_mod(expr: &Expr, modulus: i64) -> Option<Expr> {
+fn simplify_in_mod(expr: &Expr, modulus: i64) -> Option<NewExpr> {
     if let Some(simpler) = simplify_in_mod_helper(expr, modulus) {
         if let Some(even_simpler) = simplify(&simpler) {
-            Some(even_simpler)
+            Some(NewExpr::from(even_simpler))
         } else {
-            Some(simpler)
+            Some(NewExpr::from(simpler))
         }
     } else {
         None
@@ -419,7 +435,11 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                         return Some(Expr::Poly(lhs_poly.modulo(modulus)));
                     }
                     if let Some(simplified) = simplify_in_mod(lhs, modulus) {
-                        return Some(Expr::Op(Mod, Rc::new(simplified), rhs_rc.clone()));
+                        return Some(Expr::Op(
+                            Mod,
+                            Rc::new(simplified.details().clone()),
+                            rhs_rc.clone(),
+                        ));
                     }
                 }
                 {
