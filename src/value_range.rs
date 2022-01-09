@@ -8,9 +8,10 @@
 /// argument.
 ///
 use std::cmp::{max, min};
+use std::fmt;
 use std::ops::RangeInclusive;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub struct ValueRange {
     start: i64,
     end: i64,
@@ -159,6 +160,12 @@ impl IntoIterator for ValueRange {
 
     fn into_iter(self) -> RangeInclusive<i64> {
         self.start..=self.end
+    }
+}
+
+impl fmt::Debug for ValueRange {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[{:?}..{:?}]", self.start, self.end)
     }
 }
 

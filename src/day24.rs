@@ -672,7 +672,7 @@ fn evaluate_one(instructions: &[Instruction], z_expr: &Expr, inputs: &[i64; 14])
     }
 }
 
-fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
+fn day_24_a_old(lines: &[&str]) -> AdventResult<Answer> {
     let mut state = State::start();
     let mut instructions = Vec::new();
     for line in lines {
@@ -693,6 +693,185 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
         }
     }
     evaluate_one(&instructions[..], z_expr, &[9; 14]);
+    Ok(0)
+}
+
+type Ranges = [ValueRange; 4];
+type Limits = [Option<ValueRange>; 4];
+
+/// Info about each instruction, and what we know about the
+/// state of the registers after it runs.
+struct Info {
+    instruction: Instruction,
+    ranges: Ranges,
+    limits: Limits,
+}
+
+impl fmt::Debug for Info {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{:?}  {:?}    limits: {:?}",
+            self.instruction, self.ranges, self.limits
+        )
+    }
+}
+
+fn ranges_after(prev_ranges: &[ValueRange; 4], instruction: &Instruction) -> Ranges {
+    let mut new_ranges = prev_ranges.clone();
+    match instruction {
+        Inp(register_name) => new_ranges[register_name.index()] = ValueRange::new(1, 9),
+        Op(op_name, register_name, rhs) => {
+            let lhs_range = prev_ranges[register_name.index()];
+            let rhs_range = match rhs {
+                Register(rhs_reg_name) => prev_ranges[rhs_reg_name.index()],
+                Constant(n) => ValueRange::new(*n, *n),
+            };
+            new_ranges[register_name.index()] = op_name.perform_on_range(lhs_range, rhs_range)
+        }
+    }
+    new_ranges
+}
+
+fn left_limit(op_name: OpName, right: ValueRange, result: ValueRange) -> Option<ValueRange> {
+    match op_name {
+        Add => ValueRange::add_backward(right, result),
+        Mul => ValueRange::mul_backward(right, result),
+        _ => None,
+    }
+}
+
+fn right_limit(op_name: OpName, left: ValueRange, result: ValueRange) -> Option<ValueRange> {
+    match op_name {
+        Add => ValueRange::add_backward(left, result),
+        Mul => ValueRange::mul_backward(left, result),
+        _ => None,
+    }
+}
+
+fn limit_range(range: ValueRange, limit: Option<ValueRange>) -> ValueRange {
+    match limit {
+        Some(lim) => ValueRange::intersect(range, lim).unwrap(),
+        None => range,
+    }
+}
+
+fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
+    let mut infos = Vec::new();
+
+    // Collect the instructions, and calculate the possible value ranges
+    // for each
+    {
+        let mut ranges = [ValueRange::new(0, 0); 4];
+        for line in lines {
+            let instruction = line.parse().unwrap();
+            ranges = ranges_after(&ranges, &instruction);
+            let limits = [None; 4];
+            let info = Info {
+                instruction,
+                ranges: ranges.clone(),
+                limits,
+            };
+            println!("{:?}", info);
+            infos.push(info)
+        }
+    }
+
+    // Working backwards from the last instruction, propagate the limits
+    // on what each register can hold.  At the end, we know each register
+    // is limited to the range of values possible.  And z must be 0.
+    println!("AAA");
+    let mut limits = [None; 4];
+    limits[3] = Some(ValueRange::new(0, 0));
+    for i in (0..infos.len()).rev() {
+        infos[i].limits = limits.clone();
+        let info = &infos[i];
+        println!("\n{:?}", info);
+        let instruction = &infos[i].instruction;
+        match instruction {
+            Inp(r) => {
+                println!("CLEAR INPUT {:?}", r);
+                limits[r.index()] = None;
+            }
+            Op(op_name, lhs, rhs) => {
+                // The range of values possible on the left-hand side is the range
+                // coming in from the previous instruction.  We can't apply the limits
+                // on the register directly, because they have to be translated through
+                // the operation first.
+                let lhs_range = if i == 0 {
+                    ValueRange::new(0, 0)
+                } else {
+                    infos[i - 1].ranges[lhs.index()]
+                };
+                // The range of input values possible on the right-hand side
+                let rhs_range = match rhs {
+                    // constant ranges are easy
+                    Constant(n) => ValueRange::new(*n, *n),
+                    // the range of values for the right-hand side comes from
+                    // combining the know range product from earlier, with any
+                    // limits we know about.
+                    Register(r) => {
+                        let prev_range = info.ranges[r.index()];
+                        let limited_range = limit_range(prev_range, info.limits[r.index()]);
+                        if limited_range != prev_range {
+                            println!(
+                                "    for {:?} COMBINING range {:?} and limit {:?} to get {:?}",
+                                r,
+                                prev_range,
+                                info.limits[r.index()].unwrap(),
+                                limited_range,
+                            );
+                        }
+                        limited_range
+                    }
+                };
+                let result_range = info.limits[lhs.index()].unwrap_or(info.ranges[lhs.index()]);
+
+                // Limits in the input value on the left side
+                let lhs_limited_range =
+                    limit_range(lhs_range, left_limit(*op_name, rhs_range, result_range));
+                let left_limit = if lhs_limited_range != lhs_range {
+                    Some(lhs_limited_range)
+                } else {
+                    None
+                };
+                println!(
+                    "    ? {:?} {:?} = {:?}   limit {:?}",
+                    op_name, rhs_range, result_range, left_limit,
+                );
+                limits[lhs.index()] = left_limit;
+                println!("    limit on {:?} is {:?}", lhs, left_limit);
+
+                // Limits on the input value on the right side
+                if let Register(rhs_reg) = rhs {
+                    let rhs_original_limited_range =
+                        limit_range(rhs_range, limits[rhs_reg.index()]);
+                    let rhs_limited_range = limit_range(
+                        rhs_original_limited_range,
+                        right_limit(*op_name, lhs_range, result_range),
+                    );
+                    let right_limit = if rhs_limited_range != info.ranges[rhs_reg.index()] {
+                        Some(rhs_limited_range)
+                    } else {
+                        None
+                    };
+                    if right_limit != limits[rhs_reg.index()] {
+                        println!(
+                            "    {:?} {:?} ? = {:?}   limit {:?}",
+                            lhs_range, op_name, result_range, right_limit,
+                        );
+                        println!(
+                            "    limit on {:?} changed from {:?} to {:?}",
+                            rhs_reg,
+                            limits[rhs_reg.index()],
+                            right_limit
+                        );
+                        limits[rhs_reg.index()] = right_limit;
+                    }
+                }
+            }
+        }
+    }
     Ok(0)
 }
 
