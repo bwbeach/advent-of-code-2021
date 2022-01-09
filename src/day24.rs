@@ -1,4 +1,5 @@
 use std::cmp::{max, min};
+use std::convert;
 use std::fmt;
 use std::ops;
 use std::rc::Rc;
@@ -169,6 +170,49 @@ impl fmt::Debug for Expr {
         match self {
             Expr::Poly(polynomial) => write!(f, "{:?}", polynomial),
             Expr::Op(op_name, a, b) => write!(f, "({:?} {:?} {:?})", a, op_name, b),
+        }
+    }
+}
+
+#[derive(Clone, Eq, PartialEq)]
+struct NewExpr {
+    details: Rc<Expr>,
+}
+
+impl NewExpr {
+    /// Matchable details of this expression.
+    fn details<'a>(&'a self) -> &'a Expr {
+        &*self.details
+    }
+
+    /// Returns the constant value of an expression if it's a polynomial
+    /// with only a constant part.
+    fn get_constant(&self) -> Option<i64> {
+        match self.details() {
+            Expr::Poly(polynomial) => polynomial.get_constant(),
+            _ => None,
+        }
+    }
+}
+
+impl fmt::Debug for NewExpr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{:?}", *self.details)
+    }
+}
+
+impl convert::From<&Rc<Expr>> for NewExpr {
+    fn from(expr: &Rc<Expr>) -> NewExpr {
+        NewExpr {
+            details: expr.clone(),
+        }
+    }
+}
+
+impl convert::From<Expr> for NewExpr {
+    fn from(expr: Expr) -> NewExpr {
+        NewExpr {
+            details: Rc::new(expr),
         }
     }
 }
@@ -409,12 +453,13 @@ fn simplify(expr: &Expr) -> Option<Expr> {
 #[test]
 fn test_simplify() {
     fn get_w_expression(lines: &[&str]) -> Expr {
+        // TODO
         let mut state = State::start();
         for line in lines {
             let instruction = line.parse().unwrap();
             state = state.after(&instruction);
         }
-        (*state.registers[0]).clone()
+        state.registers[0].details().clone()
     }
 
     // Register starts at 0
@@ -531,16 +576,16 @@ fn test_simplify() {
 
 struct State {
     next_input: Option<InputName>,
-    registers: [Rc<Expr>; 4],
+    registers: [NewExpr; 4],
 }
 
 fn set_register(
     register_name: RegisterName,
     value: Expr,
-    old_registers: &[Rc<Expr>; 4],
-) -> [Rc<Expr>; 4] {
+    old_registers: &[NewExpr; 4],
+) -> [NewExpr; 4] {
     let mut result = old_registers.clone();
-    result[register_name.index()] = Rc::new(value);
+    result[register_name.index()] = NewExpr::from(value);
     result
 }
 
@@ -549,10 +594,10 @@ impl State {
         State {
             next_input: Some(InputName::first()),
             registers: [
-                Rc::new(Expr::constant(0)),
-                Rc::new(Expr::constant(0)),
-                Rc::new(Expr::constant(0)),
-                Rc::new(Expr::constant(0)),
+                NewExpr::from(Expr::constant(0)),
+                NewExpr::from(Expr::constant(0)),
+                NewExpr::from(Expr::constant(0)),
+                NewExpr::from(Expr::constant(0)),
             ],
         }
     }
@@ -579,9 +624,9 @@ impl State {
                     Register(rhs_register_name) => {
                         self.registers[rhs_register_name.index()].clone()
                     }
-                    Constant(n) => Rc::new(Expr::constant(*n)),
+                    Constant(n) => NewExpr::from(Expr::constant(*n)),
                 };
-                let mut expr = Expr::Op(*op_name, lhs, rhs);
+                let mut expr = Expr::Op(*op_name, lhs.details.clone(), rhs.details.clone());
                 while let Some(simplified) = simplify(&expr) {
                     println!("SIMPLIFY {:?} => {:?}", expr, simplified);
                     expr = simplified;
@@ -598,7 +643,7 @@ impl State {
 fn print_state(state: &State) {
     // println!("next input: {:?}", state.next_input);
     for (r, expr) in RegisterName::all().into_iter().zip(state.registers.iter()) {
-        println!("{:?} = {:?}   {:?}", r, get_range(expr), *expr);
+        println!("{:?} = {:?}   {:?}", r, get_range(expr.details()), *expr);
     }
     println!("");
 }
@@ -609,9 +654,9 @@ fn indent(indentation: usize) {
     }
 }
 
-fn print_tree(expr: &Expr, indentation: usize) {
-    let range = get_range(expr);
-    match expr {
+fn print_tree(expr: &NewExpr, indentation: usize) {
+    let range = get_range(expr.details()); // TODO
+    match expr.details() {
         Expr::Poly(polynomial) => println!(
             "{:?} {{{:?} .. {:?}}}",
             polynomial,
@@ -621,9 +666,9 @@ fn print_tree(expr: &Expr, indentation: usize) {
         Expr::Op(op_name, lhs_rc, rhs_rc) => {
             println!("{:?} {{{:?} .. {:?}}}", op_name, range.start(), range.end());
             indent(indentation + 1);
-            print_tree(&**lhs_rc, indentation + 1);
+            print_tree(&NewExpr::from(lhs_rc), indentation + 1);
             indent(indentation + 1);
-            print_tree(&**rhs_rc, indentation + 1);
+            print_tree(&NewExpr::from(rhs_rc), indentation + 1);
         }
     }
 }
@@ -678,11 +723,11 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     for n in 0..=8 {
         let mut inputs = [n; 14];
         for i in 0..13 {
-            evaluate_one(&instructions[..], z_expr, &inputs);
+            evaluate_one(&instructions[..], z_expr.details(), &inputs);
             inputs[i] += 1;
         }
     }
-    evaluate_one(&instructions[..], z_expr, &[9; 14]);
+    evaluate_one(&instructions[..], z_expr.details(), &[9; 14]);
     Ok(0)
 }
 
