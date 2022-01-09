@@ -733,18 +733,30 @@ fn ranges_after(prev_ranges: &[ValueRange; 4], instruction: &Instruction) -> Ran
     new_ranges
 }
 
-fn left_limit(op_name: OpName, right: ValueRange, result: ValueRange) -> Option<ValueRange> {
+fn left_limit(
+    op_name: OpName,
+    left: ValueRange,
+    right: ValueRange,
+    result: ValueRange,
+) -> Option<ValueRange> {
     match op_name {
         Add => ValueRange::add_backward(right, result),
         Mul => ValueRange::mul_backward(right, result),
+        Eql => ValueRange::eql_backward(left, right, result),
         _ => None,
     }
 }
 
-fn right_limit(op_name: OpName, left: ValueRange, result: ValueRange) -> Option<ValueRange> {
+fn right_limit(
+    op_name: OpName,
+    left: ValueRange,
+    right: ValueRange,
+    result: ValueRange,
+) -> Option<ValueRange> {
     match op_name {
         Add => ValueRange::add_backward(left, result),
         Mul => ValueRange::mul_backward(left, result),
+        Eql => ValueRange::eql_backward(right, left, result),
         _ => None,
     }
 }
@@ -828,8 +840,10 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
                 let result_range = info.limits[lhs.index()].unwrap_or(info.ranges[lhs.index()]);
 
                 // Limits in the input value on the left side
-                let lhs_limited_range =
-                    limit_range(lhs_range, left_limit(*op_name, rhs_range, result_range));
+                let lhs_limited_range = limit_range(
+                    lhs_range,
+                    left_limit(*op_name, lhs_range, rhs_range, result_range),
+                );
                 let left_limit = if lhs_limited_range != lhs_range {
                     Some(lhs_limited_range)
                 } else {
@@ -848,7 +862,7 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
                         limit_range(rhs_range, limits[rhs_reg.index()]);
                     let rhs_limited_range = limit_range(
                         rhs_original_limited_range,
-                        right_limit(*op_name, lhs_range, result_range),
+                        right_limit(*op_name, lhs_range, rhs_range, result_range),
                     );
                     let right_limit = if rhs_limited_range != info.ranges[rhs_reg.index()] {
                         Some(rhs_limited_range)

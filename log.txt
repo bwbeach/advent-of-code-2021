@@ -303,23 +303,23 @@ Op(*, y, 0)  [[1..9], [0..1], [0..0], [0..257005702]]    limits: [None, Some([0.
     limit on y is None
 
 Op(=, x, 0)  [[1..9], [0..1], [0..12], [0..257005702]]    limits: [None, Some([0..0]), None, Some([0..0])]
-    ? = [0..0] = [0..0]   limit None
-    limit on x is None
+    ? = [0..0] = [0..0]   limit Some([1..1])
+    limit on x is Some([1..1])
 
-Op(=, x, w)  [[1..9], [0..1], [0..12], [0..257005702]]    limits: [None, None, None, Some([0..0])]
-    ? = [1..9] = [0..1]   limit None
-    limit on x is None
+Op(=, x, w)  [[1..9], [0..1], [0..12], [0..257005702]]    limits: [None, Some([1..1]), None, Some([0..0])]
+    ? = [1..9] = [1..1]   limit Some([1..9])
+    limit on x is Some([1..9])
 
-Op(+, x, -4)  [[1..9], [-4..21], [0..12], [0..257005702]]    limits: [None, None, None, Some([0..0])]
-    ? + [-4..-4] = [-4..21]   limit None
-    limit on x is None
+Op(+, x, -4)  [[1..9], [-4..21], [0..12], [0..257005702]]    limits: [None, Some([1..9]), None, Some([0..0])]
+    ? + [-4..-4] = [1..9]   limit Some([5..13])
+    limit on x is Some([5..13])
 
-Op(/, z, 26)  [[1..9], [0..25], [0..12], [0..257005702]]    limits: [None, None, None, Some([0..0])]
+Op(/, z, 26)  [[1..9], [0..25], [0..12], [0..257005702]]    limits: [None, Some([5..13]), None, Some([0..0])]
     ? / [26..26] = [0..0]   limit None
     limit on z is None
 
-Op(%, x, 26)  [[1..9], [0..25], [0..12], [13..6682148264]]    limits: [None, None, None, None]
-    ? % [26..26] = [0..25]   limit None
+Op(%, x, 26)  [[1..9], [0..25], [0..12], [13..6682148264]]    limits: [None, Some([5..13]), None, None]
+    ? % [26..26] = [5..13]   limit None
     limit on x is None
 
 Op(+, x, z)  [[1..9], [13..6682148264], [0..12], [13..6682148264]]    limits: [None, None, None, None]

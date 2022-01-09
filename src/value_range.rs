@@ -139,6 +139,28 @@ impl ValueRange {
         }
     }
 
+    /// The range of possible inputs to `eql` on the lift side given a right range and a result range.
+    ///
+    pub fn eql_backward(a: ValueRange, b: ValueRange, z: ValueRange) -> Option<ValueRange> {
+        // There are some things we can do if we know the result is "not equal"
+        if z == ValueRange::new(0, 0) {
+            if b.start == b.end {
+                if a.start + 1 == a.end {
+                    if a.start == b.start {
+                        return Some(ValueRange::new(a.end, a.end));
+                    } else {
+                        return Some(ValueRange::new(a.start, a.start));
+                    }
+                }
+            }
+        }
+        // If the results are "equal", we know the range of the input
+        if z == ValueRange::new(1, 1) {
+            return Some(b);
+        }
+        None
+    }
+
     /// Returns the intersection of the two ranges.  
     /// ValueRanges always contain at least one value, so None is returned
     /// if the intersection is empty.
@@ -181,7 +203,6 @@ fn test_ops() {
         range_op: fn(ValueRange, ValueRange) -> ValueRange,
     ) {
         let z_range = range_op(a_range, b_range);
-        println!("{:?} {:?} {:?}", a_range, b_range, z_range);
         let mut z_min = None;
         let mut z_max = None;
         for a in a_range {
@@ -301,5 +322,29 @@ fn test_ops() {
         ValueRange::new(5, 5),
         |a, b| if a == b { 1 } else { 0 },
         ValueRange::eql_forward,
+    );
+    assert_eq!(
+        ValueRange::eql_backward(
+            ValueRange::new(2, 3),
+            ValueRange::new(3, 3),
+            ValueRange::new(0, 0)
+        ),
+        Some(ValueRange::new(2, 2))
+    );
+    assert_eq!(
+        ValueRange::eql_backward(
+            ValueRange::new(2, 3),
+            ValueRange::new(2, 2),
+            ValueRange::new(0, 0)
+        ),
+        Some(ValueRange::new(3, 3))
+    );
+    assert_eq!(
+        ValueRange::eql_backward(
+            ValueRange::new(2, 3),
+            ValueRange::new(2, 2),
+            ValueRange::new(1, 1)
+        ),
+        Some(ValueRange::new(2, 2))
     );
 }
