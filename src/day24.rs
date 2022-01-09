@@ -185,6 +185,18 @@ impl NewExpr {
         &*self.details
     }
 
+    /// Returns an expression holding a constant value
+    fn constant(n: i64) -> NewExpr {
+        let details = Rc::new(Expr::constant(n));
+        NewExpr { details }
+    }
+
+    /// Returns an expression holding an operation
+    fn op(op_name: OpName, lhs: Expr, rhs: Expr) -> NewExpr {
+        let details = Rc::new(Expr::Op(op_name, Rc::new(lhs), Rc::new(rhs)));
+        NewExpr { details }
+    }
+
     /// Returns the constant value of an expression if it's a polynomial
     /// with only a constant part.
     fn get_constant(&self) -> Option<i64> {
@@ -261,13 +273,13 @@ fn both_ways<T: Copy>(a: T, b: T) -> [(T, T); 2] {
     [(a, b), (b, a)]
 }
 
-fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
+fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<NewExpr> {
     match expr {
         Expr::Poly(polynomial) => {
             if let Some(n) = polynomial.get_constant() {
                 if n % modulus != n {
                     println!("    => {:?}", n % modulus);
-                    Some(Expr::constant(n % modulus))
+                    Some(NewExpr::constant(n % modulus))
                 } else {
                     None
                 }
@@ -282,16 +294,16 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
                 Add => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
                     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(Expr::Op(
+                        Some(NewExpr::op(
                             *op_name,
-                            Rc::new(simplified_lhs.details().clone()),
-                            rhs_rc.clone(),
+                            simplified_lhs.details().clone(),
+                            (**rhs_rc).clone(),
                         ))
                     } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
-                        Some(Expr::Op(
+                        Some(NewExpr::op(
                             *op_name,
-                            lhs_rc.clone(),
-                            Rc::new(simplified_rhs.details().clone()),
+                            (**lhs_rc).clone(),
+                            simplified_rhs.details().clone(),
                         ))
                     } else {
                         None
@@ -300,16 +312,16 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
                 Mul => {
                     // In the context of a mod operation, we can recursively look at addends and multiplicands.
                     if let Some(simplified_lhs) = simplify_in_mod(lhs, modulus) {
-                        Some(Expr::Op(
+                        Some(NewExpr::op(
                             *op_name,
-                            Rc::new(simplified_lhs.details().clone()),
-                            rhs_rc.clone(),
+                            simplified_lhs.details().clone(),
+                            (**rhs_rc).clone(),
                         ))
                     } else if let Some(simplified_rhs) = simplify_in_mod(rhs, modulus) {
-                        Some(Expr::Op(
+                        Some(NewExpr::op(
                             *op_name,
-                            lhs_rc.clone(),
-                            Rc::new(simplified_rhs.details().clone()),
+                            (**lhs_rc).clone(),
+                            simplified_rhs.details().clone(),
                         ))
                     } else {
                         None
@@ -331,7 +343,7 @@ fn simplify_in_mod_helper(expr: &Expr, modulus: i64) -> Option<Expr> {
 
 fn simplify_in_mod(expr: &Expr, modulus: i64) -> Option<NewExpr> {
     if let Some(simpler) = simplify_in_mod_helper(expr, modulus) {
-        if let Some(even_simpler) = simplify(&simpler) {
+        if let Some(even_simpler) = simplify(simpler.details()) {
             Some(NewExpr::from(even_simpler))
         } else {
             Some(NewExpr::from(simpler))
