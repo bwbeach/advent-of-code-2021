@@ -4,38 +4,12 @@ use std::ops;
 use std::ops::RangeInclusive;
 use std::rc::Rc;
 
-use crate::day24_alu::{InputName, OpName, RegisterName, RegisterOrConstant};
+use crate::day24_alu::{InputName, Instruction, OpName, RegisterName, RegisterOrConstant};
 use crate::types::{AdventResult, Answer, Day, DayPart};
 
+use Instruction::*;
 use OpName::*;
 use RegisterOrConstant::*;
-
-#[derive(Debug)]
-enum Instruction {
-    Inp(RegisterName),
-    Op(OpName, RegisterName, RegisterOrConstant),
-}
-
-use Instruction::*;
-
-impl Instruction {
-    // TODO: convert to FromStr
-    fn parse(s: &str) -> Instruction {
-        let words: Vec<_> = s.split_whitespace().collect();
-        if words[0] == "inp" {
-            if words.len() != 2 {
-                panic!("wrong length of inp instruction");
-            }
-            Inp(words[1].parse().unwrap())
-        } else {
-            Op(
-                words[0].parse().unwrap(),
-                words[1].parse().unwrap(),
-                words[2].parse().unwrap(),
-            )
-        }
-    }
-}
 
 // A linear polynomial of input values
 #[derive(Clone, Copy, Eq, PartialEq)]

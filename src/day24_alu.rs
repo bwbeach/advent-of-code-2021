@@ -231,3 +231,31 @@ fn test_perform_op() {
     assert_eq!(0, Eql.perform(3, 5));
     assert_eq!(1, Eql.perform(5, 5));
 }
+
+/// One ALU instruction
+#[derive(Debug)]
+pub enum Instruction {
+    Inp(RegisterName),
+    Op(OpName, RegisterName, RegisterOrConstant),
+}
+
+use Instruction::*;
+
+impl Instruction {
+    // TODO: convert to FromStr
+    pub fn parse(s: &str) -> Instruction {
+        let words: Vec<_> = s.split_whitespace().collect();
+        if words[0] == "inp" {
+            if words.len() != 2 {
+                panic!("wrong length of inp instruction");
+            }
+            Inp(words[1].parse().unwrap())
+        } else {
+            Op(
+                words[0].parse().unwrap(),
+                words[1].parse().unwrap(),
+                words[2].parse().unwrap(),
+            )
+        }
+    }
+}
