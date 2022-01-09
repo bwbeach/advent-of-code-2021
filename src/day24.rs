@@ -1,5 +1,4 @@
 use std::cmp::{max, min};
-use std::convert;
 use std::fmt;
 use std::ops;
 use std::rc::Rc;
@@ -208,22 +207,6 @@ impl NewExpr {
 impl fmt::Debug for NewExpr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{:?}", *self.details)
-    }
-}
-
-impl convert::From<&Rc<Expr>> for NewExpr {
-    fn from(expr: &Rc<Expr>) -> NewExpr {
-        NewExpr {
-            details: expr.clone(),
-        }
-    }
-}
-
-impl convert::From<&Expr> for NewExpr {
-    fn from(expr: &Expr) -> NewExpr {
-        NewExpr {
-            details: Rc::new(expr.clone()),
-        }
     }
 }
 
