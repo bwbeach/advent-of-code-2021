@@ -7,6 +7,7 @@ pub enum AluError {
     BadRegisterName(String),
     NotRegisterOrConstant(String),
     NotOpName(String),
+    BadInstruction(String),
 }
 
 /// The name of a register in the ALU
@@ -241,21 +242,22 @@ pub enum Instruction {
 
 use Instruction::*;
 
-impl Instruction {
-    // TODO: convert to FromStr
-    pub fn parse(s: &str) -> Instruction {
+impl str::FromStr for Instruction {
+    type Err = AluError;
+    fn from_str(s: &str) -> Result<Instruction, AluError> {
         let words: Vec<_> = s.split_whitespace().collect();
         if words[0] == "inp" {
             if words.len() != 2 {
-                panic!("wrong length of inp instruction");
+                Err(AluError::BadInstruction(s.to_string()))
+            } else {
+                Ok(Inp(words[1].parse()?))
             }
-            Inp(words[1].parse().unwrap())
         } else {
-            Op(
-                words[0].parse().unwrap(),
-                words[1].parse().unwrap(),
-                words[2].parse().unwrap(),
-            )
+            if words.len() != 3 {
+                Err(AluError::BadInstruction(s.to_string()))
+            } else {
+                Ok(Op(words[0].parse()?, words[1].parse()?, words[2].parse()?))
+            }
         }
     }
 }

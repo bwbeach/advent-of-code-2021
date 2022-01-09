@@ -445,7 +445,8 @@ fn test_simplify() {
     fn get_w_expression(lines: &[&str]) -> Expr {
         let mut state = State::start();
         for line in lines {
-            state = state.after(&Instruction::parse(line));
+            let instruction = line.parse().unwrap();
+            state = state.after(&instruction);
         }
         (*state.registers[0]).clone()
     }
@@ -700,7 +701,7 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut instructions = Vec::new();
     for line in lines {
         println!("INSTRUCTION: {:?}\n", line);
-        let instruction = Instruction::parse(line);
+        let instruction = line.parse().unwrap();
         state = state.after(&instruction);
         instructions.push(instruction);
         print_state(&state);
