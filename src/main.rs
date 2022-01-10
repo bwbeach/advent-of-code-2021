@@ -62,7 +62,7 @@ fn run_day_part(day: &Day, is_first_part: bool) -> AdventResult<()> {
     } else {
         &day.part_b
     };
-    // XXX run_once(day_part, &input_dir, "sample.txt", day_part.sample_answer)?;
+    run_once(day_part, &input_dir, "sample.txt", day_part.sample_answer)?;
     run_once(day_part, &input_dir, "input.txt", day_part.full_answer)?;
     Ok(())
 }

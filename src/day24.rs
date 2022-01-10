@@ -769,6 +769,67 @@ fn limit_range(range: ValueRange, limit: Option<ValueRange>) -> ValueRange {
     }
 }
 
+fn search(
+    mut registers: [i64; 4],
+    infos: &[Info],
+    starting_pc: usize,
+    bindings: [i64; 14],
+    input_counter: usize,
+) -> Option<Answer> {
+    // Run instructions as long they are not input instructions, and we're not at the end.
+    for pc in starting_pc..infos.len() {
+        match &infos[pc].instruction {
+            Inp(reg_name) => {
+                // try all of the possible inputs, and then search the rest of the program
+                for value in (1..=9).rev() {
+                    let mut new_registers = registers.clone();
+                    new_registers[reg_name.index()] = value;
+                    let mut new_bindings = bindings.clone();
+                    new_bindings[input_counter] = value;
+                    if let Some(answer) = search(
+                        new_registers,
+                        infos,
+                        pc + 1,
+                        new_bindings,
+                        input_counter + 1,
+                    ) {
+                        return Some(answer);
+                    }
+                }
+                // none of the input values worked
+                return None;
+            }
+            Op(op_name, register, rhs) => {
+                let r = register.index();
+                let lhs_value = registers[r];
+                let rhs_value = match rhs {
+                    Constant(n) => *n,
+                    Register(rhs_reg) => registers[rhs_reg.index()],
+                };
+                let new_value = op_name.perform(lhs_value, rhs_value);
+                if let Some(limit) = infos[pc].limits[r] {
+                    if !limit.contains(new_value) {
+                        return None;
+                    }
+                }
+                registers[r] = op_name.perform(lhs_value, rhs_value);
+            }
+        }
+    }
+    // We've reached the end of the problem, we need to stop.
+    if registers[3] == 0 {
+        // we found an answer!
+        let mut result = 0;
+        for b in bindings {
+            result = result * 10 + b;
+        }
+        Some(result as Answer)
+    } else {
+        // not zero; need caller to keep searching
+        None
+    }
+}
+
 fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     let mut infos = Vec::new();
 
@@ -803,7 +864,6 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
         let instruction = &infos[i].instruction;
         match instruction {
             Inp(r) => {
-                println!("CLEAR INPUT {:?}", r);
                 limits[r.index()] = None;
             }
             Op(op_name, lhs, rhs) => {
@@ -887,7 +947,9 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
             }
         }
     }
-    Ok(0)
+
+    /// Now do the search
+    Ok(search([0; 4], &infos, 0, [0; 14], 0).unwrap())
 }
 
 fn day_24_b(_lines: &[&str]) -> AdventResult<Answer> {
@@ -897,7 +959,7 @@ fn day_24_b(_lines: &[&str]) -> AdventResult<Answer> {
 pub fn make_day_24() -> Day {
     Day::new(
         24,
-        DayPart::new(day_24_a, 0, 0),
+        DayPart::new(day_24_a, 80000000000000, 12996997829399),
         DayPart::new(day_24_b, 0, 0),
     )
 }
