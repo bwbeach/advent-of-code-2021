@@ -775,13 +775,14 @@ fn search(
     starting_pc: usize,
     bindings: [i64; 14],
     input_counter: usize,
+    search_order: &[i64],
 ) -> Option<Answer> {
     // Run instructions as long they are not input instructions, and we're not at the end.
     for pc in starting_pc..infos.len() {
         match &infos[pc].instruction {
             Inp(reg_name) => {
                 // try all of the possible inputs, and then search the rest of the program
-                for value in (1..=9).rev() {
+                for &value in search_order {
                     let mut new_registers = registers.clone();
                     new_registers[reg_name.index()] = value;
                     let mut new_bindings = bindings.clone();
@@ -792,6 +793,7 @@ fn search(
                         pc + 1,
                         new_bindings,
                         input_counter + 1,
+                        search_order,
                     ) {
                         return Some(answer);
                     }
@@ -830,7 +832,7 @@ fn search(
     }
 }
 
-fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
+fn day_24(lines: &[&str], search_order: &[i64]) -> AdventResult<Answer> {
     if false {
         let _ = day_24_a_old(lines);
     }
@@ -926,17 +928,23 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     }
 
     // Now do the search
-    Ok(search([0; 4], &infos, 0, [0; 14], 0).unwrap())
+    Ok(search([0; 4], &infos, 0, [0; 14], 0, search_order).unwrap())
 }
 
-fn day_24_b(_lines: &[&str]) -> AdventResult<Answer> {
-    Ok(0)
+fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
+    let search_order: Vec<i64> = (1..=9).rev().collect();
+    day_24(lines, &search_order[..])
+}
+
+fn day_24_b(lines: &[&str]) -> AdventResult<Answer> {
+    let search_order: Vec<i64> = (1..=9).collect();
+    day_24(lines, &search_order[..])
 }
 
 pub fn make_day_24() -> Day {
     Day::new(
         24,
         DayPart::new(day_24_a, 80000000000000, 12996997829399),
-        DayPart::new(day_24_b, 0, 0),
+        DayPart::new(day_24_b, 20000000000000, 11841231117189),
     )
 }
