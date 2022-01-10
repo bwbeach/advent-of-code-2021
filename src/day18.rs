@@ -4,7 +4,9 @@ use std::iter;
 use std::rc::Rc;
 use std::str::FromStr;
 
-use itertools::{iproduct, Itertools};
+use itertools::iproduct;
+#[cfg(test)]
+use itertools::Itertools;
 
 use crate::types::{AdventError, AdventResult, Answer, Day, DayPart};
 

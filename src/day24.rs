@@ -831,6 +831,10 @@ fn search(
 }
 
 fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
+    if false {
+        let _ = day_24_a_old(lines);
+    }
+
     let mut infos = Vec::new();
 
     // Collect the instructions, and calculate the possible value ranges
@@ -846,7 +850,6 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
                 ranges: ranges.clone(),
                 limits,
             };
-            println!("{:?}", info);
             infos.push(info)
         }
     }
@@ -854,13 +857,11 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
     // Working backwards from the last instruction, propagate the limits
     // on what each register can hold.  At the end, we know each register
     // is limited to the range of values possible.  And z must be 0.
-    println!("AAA");
     let mut limits = [None; 4];
     limits[3] = Some(ValueRange::new(0, 0));
     for i in (0..infos.len()).rev() {
         infos[i].limits = limits.clone();
         let info = &infos[i];
-        println!("\n{:?}", info);
         let instruction = &infos[i].instruction;
         match instruction {
             Inp(r) => {
@@ -886,15 +887,6 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
                     Register(r) => {
                         let prev_range = info.ranges[r.index()];
                         let limited_range = limit_range(prev_range, info.limits[r.index()]);
-                        if limited_range != prev_range {
-                            println!(
-                                "    for {:?} COMBINING range {:?} and limit {:?} to get {:?}",
-                                r,
-                                prev_range,
-                                info.limits[r.index()].unwrap(),
-                                limited_range,
-                            );
-                        }
                         limited_range
                     }
                 };
@@ -910,12 +902,7 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
                 } else {
                     None
                 };
-                println!(
-                    "    ? {:?} {:?} = {:?}   limit {:?}",
-                    op_name, rhs_range, result_range, left_limit,
-                );
                 limits[lhs.index()] = left_limit;
-                println!("    limit on {:?} is {:?}", lhs, left_limit);
 
                 // Limits on the input value on the right side
                 if let Register(rhs_reg) = rhs {
@@ -931,16 +918,6 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
                         None
                     };
                     if right_limit != limits[rhs_reg.index()] {
-                        println!(
-                            "    {:?} {:?} ? = {:?}   limit {:?}",
-                            lhs_range, op_name, result_range, right_limit,
-                        );
-                        println!(
-                            "    limit on {:?} changed from {:?} to {:?}",
-                            rhs_reg,
-                            limits[rhs_reg.index()],
-                            right_limit
-                        );
                         limits[rhs_reg.index()] = right_limit;
                     }
                 }
@@ -948,7 +925,7 @@ fn day_24_a(lines: &[&str]) -> AdventResult<Answer> {
         }
     }
 
-    /// Now do the search
+    // Now do the search
     Ok(search([0; 4], &infos, 0, [0; 14], 0).unwrap())
 }
 
